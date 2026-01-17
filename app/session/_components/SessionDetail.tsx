@@ -273,10 +273,10 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       Review top 3 pages visited
                     </div>
                     <div className="mt-2 space-y-1 text-xs text-zinc-600">
-                      {computedSummary.topPages.length === 0 ? (
+                      {(computedSummary.topPages ?? []).length === 0 ? (
                         <p>No pages yet.</p>
                       ) : (
-                        computedSummary.topPages.map((page) => (
+                        (computedSummary.topPages ?? []).map((page) => (
                           <button
                             key={page.url}
                             type="button"
