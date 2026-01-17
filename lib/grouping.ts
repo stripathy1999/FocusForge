@@ -73,6 +73,8 @@ export function computeSummary(
     lastStop: lastStop
       ? { url: lastStop.url, title: lastStop.title, ts: lastStop.ts }
       : undefined,
+    emotionalSummary: buildEmotionalSummary(domains),
+    aiSummary: Boolean(analysis),
     resumeSummary: analysis?.resumeSummary ?? fallbackResumeSummary,
     nextActions: analysis?.nextActions?.length
       ? analysis.nextActions
@@ -246,6 +248,28 @@ function buildTimeBreakdown(
     items.push({ label: "Background", timeSec: backgroundTimeSec });
   }
   return items.slice(0, 4);
+}
+
+function buildEmotionalSummary(domains: DomainSummary[]): string {
+  const first = domains[0];
+  const second = domains[1];
+  if (!first) {
+    return "You were in the middle of something important — want to continue?";
+  }
+  const label = first.label.toLowerCase();
+  if (label.includes("job")) {
+    return "Looks like you were job hunting and comparing roles.";
+  }
+  if (label.includes("interview") || label.includes("system design")) {
+    return "You were deep in prep mode — want to pick up where you left off?";
+  }
+  if (label.includes("docs") || label.includes("writing")) {
+    return "You were drafting something important — want to continue?";
+  }
+  if (second) {
+    return `You were switching between ${first.label} and ${second.label} — want to pick one to resume?`;
+  }
+  return "You were in the middle of something important — want to continue?";
 }
 
 function getTopPages(timeline: TimelineEvent[], limit: number): TopPage[] {

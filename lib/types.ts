@@ -60,6 +60,8 @@ export type ComputedSummary = {
   timeBreakdown: TimeBreakdownItem[];
   topPages: TopPage[];
   lastStop?: { url: string; title: string; ts: number };
+  emotionalSummary: string;
+  aiSummary: boolean;
   resumeSummary: string;
   nextActions: string[];
   pendingDecisions: string[];
