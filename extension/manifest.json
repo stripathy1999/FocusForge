@@ -6,6 +6,8 @@
   "permissions": ["tabs", "storage"],
   "host_permissions": [
     "http://localhost:3000/*",
+    "https://focusforge-one.vercel.app/*",
+    "https://*.vercel.app/*",
     "https://YOUR_DEPLOYED_DOMAIN/*"
   ],
   "action": {
@@ -18,6 +20,8 @@
     {
       "matches": [
         "http://localhost:3000/*",
+        "https://focusforge-one.vercel.app/*",
+        "https://*.vercel.app/*",
         "https://YOUR_DEPLOYED_DOMAIN/*"
       ],
       "js": ["content.js"]

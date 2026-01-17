@@ -80,7 +80,9 @@ async function handleStart() {
     intent,
   });
   if (!response.ok) {
-    statusText.textContent = "Status: Error starting session";
+    const message = await response.text();
+    statusText.textContent = `Status: Error starting session (${response.status})`;
+    console.error("Start session failed", message);
     return;
   }
   const data = await response.json();
