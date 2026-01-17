@@ -10,22 +10,22 @@ import type { NextConfig } from "next";
  * - Subtitles/Body: Lato (regular/medium) - used for body text
  * 
  * Colors:
- * - Primary: #2BB7D0 (headers, main CTAs, primary elements)
- * - Secondary: #5BC5D9 (subtitles, secondary actions)
- * - Light Accent: #4AB5C9 (lighter subtitle variants)
+ * - Primary: #32578E (headers, main CTAs, primary elements)
+ * - Secondary: #4777B9 (subtitles, secondary actions)
+ * - Light Accent: #669EE6 (lighter subtitle variants)
  * - Muted: #8f8f9f (body text, descriptions)
- * - Primary Dark: #22a3be (darker variant)
- * - Primary Light: #7ee0ed (lighter variant)
+ * - Primary Dark: #223758 (darker variant)
+ * - Primary Light: #9ED5FF (lighter variant)
  */
 
 export const theme = {
   colors: {
-    primary: "#2BB7D0",
-    secondary: "#5BC5D9",
-    lightAccent: "#4AB5C9",
+    primary: "#32578E",
+    secondary: "#4777B9",
+    lightAccent: "#669EE6",
     muted: "#8f8f9f",
-    primaryDark: "#22a3be",
-    primaryLight: "#7ee0ed",
+    primaryDark: "#223758",
+    primaryLight: "#9ED5FF",
   },
   fonts: {
     header: {

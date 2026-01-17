@@ -9,9 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Jura:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
       :root {
-        --teal: #2BB7D0;
-        --teal-light: #5BC5D9;
-        --teal-link: #4AB5C9;
+        --teal: #32578E;
+        --teal-light: #4777B9;
+        --teal-link: #669EE6;
         --zinc-50: #fafafa;
         --zinc-100: #f4f4f5;
         --zinc-200: #e4e4e7;
@@ -79,8 +79,8 @@
       .label {
         font-size: 11px;
         font-weight: 500;
-        color: #2BB7D0 !important;
-        -webkit-text-fill-color: #2BB7D0 !important;
+        color: #32578E !important;
+        -webkit-text-fill-color: #32578E !important;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         margin-bottom: 6px;
@@ -104,7 +104,7 @@
         letter-spacing: 0.04em;
       }
       .status-badge.stopped { background: var(--zinc-100); color: var(--zinc-600); }
-      .status-badge.running { background: #dcf9fc; color: var(--teal); }
+      .status-badge.running { background: #e8f0f8; color: var(--teal); }
       .status-badge.paused { background: #fef3c7; color: #b45309; }
       .status-badge.away { background: #fce7f3; color: #be185d; }
 
@@ -178,7 +178,7 @@
       }
 
       .btn-primary:hover:not(:disabled) {
-        background: #26a5bd;
+        background: #2a4a75;
       }
 
       .btn-secondary {
@@ -193,9 +193,9 @@
       }
 
       .btn-secondary:disabled {
-        color: #2BB7D0 !important;
-        -webkit-text-fill-color: #2BB7D0 !important;
-        border-color: #2BB7D0;
+        color: #32578E !important;
+        -webkit-text-fill-color: #32578E !important;
+        border-color: #32578E;
         opacity: 1;
       }
 
@@ -248,13 +248,13 @@
         <div class="logo"></div>
         <h1 class="title">FocusForge</h1>
       </div>
-      <div class="label" style="color: #2BB7D0; -webkit-text-fill-color: #2BB7D0">Status</div>
+      <div class="label" style="color: #32578E; -webkit-text-fill-color: #32578E">Status</div>
       <div class="status-row">
         <span id="statusText" class="status-badge stopped">Stopped</span>
         <div id="timerEl" class="timer">—</div>
       </div>
 
-      <div class="label" style="color: #2BB7D0; -webkit-text-fill-color: #2BB7D0">Session intent</div>
+      <div class="label" style="color: #32578E; -webkit-text-fill-color: #32578E">Session intent</div>
       <input
         id="intentInput"
         type="text"
@@ -278,12 +278,12 @@
         </div>
       </div>
 
-      <div class="label" style="margin-top: 12px; color: #2BB7D0; -webkit-text-fill-color: #2BB7D0">Current session</div>
+      <div class="label" style="margin-top: 12px; color: #32578E; -webkit-text-fill-color: #32578E">Current session</div>
       <div class="session-id" id="sessionId">—</div>
     </div>
 
     <div class="card">
-      <div class="label" style="color: #2BB7D0; -webkit-text-fill-color: #2BB7D0">API base URL</div>
+      <div class="label" style="color: #32578E; -webkit-text-fill-color: #32578E">API base URL</div>
       <input id="baseUrlInput" type="text" placeholder="http://localhost:3000" />
       <div class="btn-row" style="margin-top: 8px">
         <button class="btn-secondary" id="saveBaseUrlBtn">Save URL</button>

@@ -5,12 +5,12 @@
   --foreground: #171717;
   
   /* Brand colors - defined in next.config.ts theme */
-  --color-primary: #2BB7D0;
-  --color-secondary: #5BC5D9;
-  --color-light-accent: #4AB5C9;
+  --color-primary: #32578E;
+  --color-secondary: #4777B9;
+  --color-light-accent: #669EE6;
   --color-muted: #8f8f9f;
-  --color-primary-dark: #22a3be;
-  --color-primary-light: #7ee0ed;
+  --color-primary-dark: #223758;
+  --color-primary-light: #9ED5FF;
 }
 
 @theme inline {

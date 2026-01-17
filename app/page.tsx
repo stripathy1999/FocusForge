@@ -62,17 +62,17 @@ export default async function Home() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <header className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="h-[90px] w-[90px] rounded-full" style={{ backgroundColor: '#2BB7D0' }}></div>
+            <div className="h-[90px] w-[90px] rounded-full" style={{ backgroundColor: '#32578E' }}></div>
             <h1 
               className="text-[90px] font-semibold leading-none"
-              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
+              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
             >
               FocusForge
             </h1>
           </div>
           <h2 
             className="mt-4 text-3xl font-semibold"
-            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#669EE6' }}
           >
             Auto-track browser sessions and resume faster.
           </h2>
@@ -85,14 +85,14 @@ export default async function Home() {
             <Link
               href="/session/live"
               className="rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm"
-              style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#2BB7D0', borderColor: '#2BB7D0' }}
+              style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#32578E', borderColor: '#32578E' }}
             >
               Open Session
             </Link>
             <Link
               href="/session/demo"
               className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-zinc-100"
-              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0', borderColor: '#2BB7D0' }}
+              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E', borderColor: '#32578E' }}
             >
               View Demo
             </Link>
@@ -102,7 +102,7 @@ export default async function Home() {
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 
             className="text-lg font-semibold"
-            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
+            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
           >
             Recent Sessions
           </h2>
@@ -113,10 +113,10 @@ export default async function Home() {
               sessions.slice(0, 5).map((session) => (
                 <div
                   key={session.id}
-                  className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 transition-all duration-200 hover:border-[#2BB7D0] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 transition-all duration-200 hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <div className="font-medium font-jura text-zinc-900">
+                    <div className="font-medium font-jura" style={{ color: '#32578E' }}>
                       {session.id}
                     </div>
                     <div className="mt-1 text-xs text-zinc-500">
@@ -134,7 +134,7 @@ export default async function Home() {
                   <Link
                     href={`/session/${session.id}`}
                     className="underline"
-                    style={{ color: '#5BC5D9' }}
+                    style={{ color: '#4777B9' }}
                   >
                     Open
                   </Link>

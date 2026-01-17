@@ -42,16 +42,53 @@ function formatEventType(type: string) {
   return type;
 }
 
-// Theme-aligned teal/cyan shades, ordered dark → light for visual distinction
+function shortenUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    let hostname = urlObj.hostname.replace(/^www\./, "");
+    let pathname = urlObj.pathname;
+    
+    // Remove trailing slash
+    if (pathname === "/") {
+      pathname = "";
+    } else {
+      // Keep only the first path segment if it exists
+      const pathParts = pathname.split("/").filter(Boolean);
+      if (pathParts.length > 0) {
+        pathname = "/" + pathParts[0];
+        // Truncate if the path segment is too long
+        if (pathname.length > 20) {
+          pathname = pathname.substring(0, 17) + "...";
+        }
+      }
+    }
+    
+    const shortUrl = hostname + pathname;
+    // Truncate entire URL if still too long
+    if (shortUrl.length > 40) {
+      return shortUrl.substring(0, 37) + "...";
+    }
+    return shortUrl;
+  } catch {
+    // If URL parsing fails, just truncate the original
+    const cleaned = url.replace(/^https?:\/\//, "").replace(/^www\./, "");
+    if (cleaned.length > 40) {
+      return cleaned.substring(0, 37) + "...";
+    }
+    return cleaned;
+  }
+}
+
+// Theme-aligned blue shades, ordered dark → light for visual distinction
 const PIE_COLORS = [
-  "#1a9ba8", // darker teal
-  "#2BB7D0", // primary
-  "#38c2d4",
-  "#5BC5D9", // secondary
-  "#4AB5C9", // light accent
-  "#6ed5e4",
-  "#22a3be",
-  "#7ee0ed", // lightest
+  "#223758", // primary dark
+  "#32578E", // primary
+  "#3d6ba3",
+  "#4777B9", // secondary
+  "#669EE6", // light accent
+  "#7db3f0",
+  "#4a7fc4",
+  "#9ED5FF", // primary light
 ];
 const PIE_BREAK_COLOR = "#8b9ca6"; // slate, theme-adjacent
 
@@ -194,7 +231,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             </p>
             <h1 
               className="text-2xl font-semibold"
-              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
+              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
             >
               Session {session.id}
             </h1>
@@ -210,8 +247,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
           <div className="flex flex-col gap-6">
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <h2 
-                className="text-lg font-semibold"
-                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
+                className="text-2xl font-semibold"
+                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
               >
                 Workspaces
               </h2>
@@ -236,7 +273,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       key={domain.domain}
                       className={`group rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
                         domain.topUrls.length > 0
-                          ? "cursor-pointer hover:border-[#2BB7D0] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                          ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
                           : ""
                       }`}
                       onClick={() => {
@@ -275,7 +312,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         <button
                           type="button"
                           className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
+                          style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleReopen(domain.topUrls);
@@ -291,7 +328,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   <div
                     className={`group rounded-xl border border-dashed border-zinc-200 bg-white p-4 transition-all duration-200 ${
                       computedSummary.background.topUrls.length > 0
-                        ? "cursor-pointer hover:border-[#2BB7D0] hover:bg-zinc-50 hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                        ? "cursor-pointer hover:border-[#32578E] hover:bg-zinc-50 hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
                         : ""
                     }`}
                     onClick={() => {
@@ -332,7 +369,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       <button
                         type="button"
                         className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
+                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (computedSummary.background) {
@@ -351,15 +388,15 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <h2 
-                  className="text-lg font-semibold"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
+                  className="text-2xl font-semibold"
+                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
                 >
                   Timeline
                 </h2>
                 <button
                   type="button"
                   className="text-xs underline-offset-4 hover:underline"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
+                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                   onClick={() => setShowFullTimeline((value) => !value)}
                 >
                   {showFullTimeline ? "Show key moments" : "View full timeline"}
@@ -376,12 +413,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     No events recorded yet.
                   </p>
                 ) : (
-                  keyTimeline.map((event) => (
+                  keyTimeline.map((event, index) => (
                     <div
-                      key={`${event.ts}-${event.type}`}
+                      key={`${event.ts}-${event.type}-${event.url || ''}-${index}`}
                       className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
                         event.url && event.type !== "BREAK"
-                          ? "hover:border-[#2BB7D0] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                          ? "hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
                           : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
                       }`}
                     >
@@ -401,13 +438,13 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                               Duration: {formatDuration(event.durationSec)}
                             </span>
                           </div>
-                          <div className="mt-2 text-sm font-medium font-jura" style={{ color: '#2BB7D0' }}>
+                          <div className="mt-2 text-sm font-medium font-jura" style={{ color: '#32578E' }}>
                             {event.title || "Untitled tab"}
                           </div>
                           <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
                             {event.url ? (
                               <>
-                                <span className="truncate">{event.url}</span>
+                                <span className="truncate" title={event.url}>{shortenUrl(event.url)}</span>
                                 <button
                                   type="button"
                                   className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
@@ -423,7 +460,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                     viewBox="0 0 16 16" 
                                     fill="none" 
                                     xmlns="http://www.w3.org/2000/svg"
-                                    style={{ color: '#5BC5D9' }}
+                                    style={{ color: '#4777B9' }}
                                   >
                                     <path 
                                       d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z" 
@@ -462,7 +499,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             <div className="flex items-center justify-between">
               <h2 
                 className="text-2xl font-semibold"
-                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
+                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
               >
                 Resume Panel
               </h2>
@@ -482,7 +519,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
+                  <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                     Session Intent
                   </p>
                   {computedSummary.intent_tags.length > 0 ? (
@@ -506,7 +543,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <button
                   type="button"
                   className="rounded-lg px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#2BB7D0', borderColor: '#2BB7D0' }}
+                  style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#32578E', borderColor: '#32578E' }}
                   onClick={() =>
                     computedSummary.resumeUrls.length
                       ? handleReopen(computedSummary.resumeUrls)
@@ -524,7 +561,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <button
                   type="button"
                   className="text-left text-sm underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
+                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                   onClick={() =>
                     computedSummary.lastStop?.url
                       ? handleReopen([computedSummary.lastStop.url])
@@ -539,13 +576,13 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 {computedSummary.emotionalSummary}
               </p>
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Resume Summary
                 </p>
                 <p className="mt-2 text-base">{computedSummary.resumeSummary}</p>
               </div>
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Quick Actions
                 </p>
                 <div className="mt-2 flex flex-col gap-2 text-sm">
@@ -554,7 +591,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <button
                       type="button"
                       className="underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
+                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                       onClick={() =>
                         computedSummary.lastStop?.url
                           ? handleReopen([computedSummary.lastStop.url])
@@ -570,7 +607,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <button
                       type="button"
                       className="underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
+                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                       onClick={() =>
                         computedSummary.domains[0]?.topUrls?.length
                           ? handleReopen(computedSummary.domains[0].topUrls)
@@ -594,7 +631,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                             key={page.url}
                             type="button"
                             className="block w-full truncate text-left underline-offset-4 hover:underline"
-                            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
+                            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                             title={page.url}
                             onClick={() => handleReopen([page.url])}
                           >
@@ -607,7 +644,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </div>
               </div>
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Time Breakdown
                 </p>
                 <TimeBreakdownPie
@@ -640,7 +677,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </div>
               </div>
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Intent Alignment
                 </p>
                 <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-600">
@@ -678,7 +715,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                 className="h-full shrink-0"
                                 style={{
                                   flex: `0 0 ${pctA}%`,
-                                  backgroundColor: "#2BB7D0",
+                                  backgroundColor: "#32578E",
                                   minWidth: a > 0 ? "2px" : undefined,
                                 }}
                                 title={`Aligned: ${formatDuration(a)}`}
@@ -687,7 +724,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                 className="h-full shrink-0"
                                 style={{
                                   flex: `0 0 ${pctO}%`,
-                                  backgroundColor: "#22a3be",
+                                  backgroundColor: "#4a7fc4",
                                   minWidth: o > 0 ? "2px" : undefined,
                                 }}
                                 title={`Off-intent: ${formatDuration(o)}`}
@@ -703,16 +740,16 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                               />
                             </>
                           ) : (
-                            <div className="h-full min-h-[12px] w-full flex-1" style={{ backgroundColor: "#7ee0ed" }} />
+                            <div className="h-full min-h-[12px] w-full flex-1" style={{ backgroundColor: "#9ED5FF" }} />
                           )}
                         </div>
                         <div className="flex flex-nowrap gap-x-3 text-xs text-zinc-600">
                           <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-                            <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#2BB7D0" }} />
+                            <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#32578E" }} />
                             Aligned {formatDuration(a)}
                           </span>
                           <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-                            <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#f59e0b" }} />
+                            <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#4a7fc4" }} />
                             Off-intent {formatDuration(o)}
                           </span>
                           <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
@@ -769,7 +806,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     target="_blank"
                     rel="noreferrer"
                     className="mt-2 inline-block text-base underline-offset-4 hover:underline"
-                    style={{ color: '#5BC5D9' }}
+                    style={{ color: '#4777B9' }}
                   >
                     {computedSummary.lastStop.title ||
                       computedSummary.lastStop.url}
@@ -779,7 +816,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 )}
               </div>
               <div className="pt-4 text-sm text-zinc-500">
-                <Link href="/session/demo" className="underline" style={{ color: '#5BC5D9' }}>
+                <Link href="/session/demo" className="underline" style={{ color: '#4777B9' }}>
                   View demo session →
                 </Link>
               </div>
