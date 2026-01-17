@@ -209,7 +209,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const timeline = computedSummary.timeline.filter(
     (event) => event.type !== "STOP",
   );
-  const [showBackground, setShowBackground] = useState(false);
   const [showFullTimeline, setShowFullTimeline] = useState(false);
   const keyTimeline = showFullTimeline
     ? timeline
@@ -252,16 +251,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               >
                 Workspaces
               </h2>
-              {computedSummary.background && (
-                <label className="mt-3 inline-flex items-center gap-2 text-xs text-zinc-600">
-                  <input
-                    type="checkbox"
-                    checked={showBackground}
-                    onChange={(event) => setShowBackground(event.target.checked)}
-                  />
-                  Show Background/Auth (hidden by default)
-                </label>
-              )}
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 {computedSummary.domains.length === 0 ? (
                   <p className="text-sm text-zinc-500">
@@ -284,7 +273,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     >
                       <div className="flex items-center justify-between text-sm">
                         <div>
-                          <span className="font-semibold font-jura">{domain.label}</span>
+                          <span className="font-semibold" style={{ fontFamily: 'var(--font-lato), sans-serif', color: '#32578E' }}>{domain.label}</span>
                         </div>
                         <span className="text-zinc-600">
                           {formatDuration(domain.timeSec)}
@@ -323,64 +312,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       )}
                     </div>
                   ))
-                )}
-                {showBackground && computedSummary.background && (
-                  <div
-                    className={`group rounded-xl border border-dashed border-zinc-200 bg-white p-4 transition-all duration-200 ${
-                      computedSummary.background.topUrls.length > 0
-                        ? "cursor-pointer hover:border-[#32578E] hover:bg-zinc-50 hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
-                        : ""
-                    }`}
-                    onClick={() => {
-                      if (computedSummary.background && computedSummary.background.topUrls.length > 0) {
-                        handleReopen(computedSummary.background.topUrls);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center justify-between text-sm">
-                      <div>
-                        <span className="font-semibold font-jura">
-                          {computedSummary.background.label}
-                        </span>
-                      </div>
-                      <span className="text-zinc-600">
-                        {formatDuration(computedSummary.background.timeSec)}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-400">
-                      {computedSummary.background.topUrls.length === 0 ? (
-                        <span>No URLs captured.</span>
-                      ) : (
-                        computedSummary.background.topUrls.map((url) => (
-                          <a
-                            key={url}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="truncate underline-offset-4 hover:underline text-zinc-400"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {url}
-                          </a>
-                        ))
-                      )}
-                    </div>
-                    {computedSummary.background.topUrls.length > 0 && (
-                      <button
-                        type="button"
-                        className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (computedSummary.background) {
-                            handleReopen(computedSummary.background.topUrls);
-                          }
-                        }}
-                      >
-                        Click to reopen workspace
-                      </button>
-                    )}
-                  </div>
                 )}
               </div>
             </div>
@@ -431,50 +362,51 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         </div>
                       ) : (
                         <>
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600">
-                            <span>{formatEventType(event.type)}</span>
-                            <span>{formatDate(event.ts)}</span>
-                            <span>
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                            <span className="font-semibold" style={{ fontFamily: 'var(--font-lato), sans-serif', color: '#32578E' }}>
+                              {event.title || "Untitled tab"}
+                            </span>
+                            <span className="text-sm text-zinc-600">{formatDate(event.ts)}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-xs text-zinc-500">
+                              {event.url ? (
+                                <>
+                                  <span className="truncate" title={event.url}>{shortenUrl(event.url)}</span>
+                                  <button
+                                    type="button"
+                                    className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
+                                    title="Copy URL"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigator.clipboard.writeText(event.url);
+                                    }}
+                                  >
+                                    <svg 
+                                      width="14" 
+                                      height="14" 
+                                      viewBox="0 0 16 16" 
+                                      fill="none" 
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      style={{ color: '#4777B9' }}
+                                    >
+                                      <path 
+                                        d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z" 
+                                        stroke="currentColor" 
+                                        strokeWidth="1.2" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round"
+                                      />
+                                    </svg>
+                                  </button>
+                                </>
+                              ) : (
+                                <span>No URL</span>
+                              )}
+                            </div>
+                            <span className="text-sm text-zinc-600">
                               Duration: {formatDuration(event.durationSec)}
                             </span>
-                          </div>
-                          <div className="mt-2 text-sm font-medium font-jura" style={{ color: '#32578E' }}>
-                            {event.title || "Untitled tab"}
-                          </div>
-                          <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
-                            {event.url ? (
-                              <>
-                                <span className="truncate" title={event.url}>{shortenUrl(event.url)}</span>
-                                <button
-                                  type="button"
-                                  className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
-                                  title="Copy URL"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(event.url);
-                                  }}
-                                >
-                                  <svg 
-                                    width="14" 
-                                    height="14" 
-                                    viewBox="0 0 16 16" 
-                                    fill="none" 
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    style={{ color: '#4777B9' }}
-                                  >
-                                    <path 
-                                      d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z" 
-                                      stroke="currentColor" 
-                                      strokeWidth="1.2" 
-                                      strokeLinecap="round" 
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </button>
-                              </>
-                            ) : (
-                              <span>No URL</span>
-                            )}
                           </div>
                         </>
                       )}
@@ -528,7 +460,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         {computedSummary.intent_tags.map((tag) => (
                           <span
                             key={tag}
-                            className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700"
+                            className="rounded-full border px-2 py-1 text-xs text-zinc-700"
+                            style={{ backgroundColor: '#9ED5FF', borderColor: '#9ED5FF' }}
                           >
                             {tag}
                           </span>
@@ -806,7 +739,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     target="_blank"
                     rel="noreferrer"
                     className="mt-2 inline-block text-base underline-offset-4 hover:underline"
-                    style={{ color: '#4777B9' }}
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                   >
                     {computedSummary.lastStop.title ||
                       computedSummary.lastStop.url}
