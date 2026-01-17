@@ -1,11 +1,37 @@
 import { randomUUID } from "crypto";
+import fs from "fs";
+import path from "path";
 
 import { Event, Session, SessionStatus } from "@/lib/types";
 
-const sessions = new Map<string, Session>();
-const eventsBySession = new Map<string, Event[]>();
+type StoreData = {
+  sessions: Record<string, Session>;
+  eventsBySession: Record<string, Event[]>;
+};
+
+const STORE_DIR = path.join(process.cwd(), ".data");
+const STORE_PATH = path.join(STORE_DIR, "store.json");
+
+function loadStore(): StoreData {
+  try {
+    const raw = fs.readFileSync(STORE_PATH, "utf-8");
+    const parsed = JSON.parse(raw) as StoreData;
+    return {
+      sessions: parsed.sessions ?? {},
+      eventsBySession: parsed.eventsBySession ?? {},
+    };
+  } catch {
+    return { sessions: {}, eventsBySession: {} };
+  }
+}
+
+function saveStore(store: StoreData): void {
+  fs.mkdirSync(STORE_DIR, { recursive: true });
+  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
+}
 
 export function createSession(): Session {
+  const store = loadStore();
   const id = randomUUID();
   const session: Session = {
     id,
@@ -13,38 +39,44 @@ export function createSession(): Session {
     status: "running",
   };
 
-  sessions.set(id, session);
-  eventsBySession.set(id, []);
+  store.sessions[id] = session;
+  store.eventsBySession[id] = [];
+  saveStore(store);
   return session;
 }
 
 export function getSession(sessionId: string): Session | undefined {
-  return sessions.get(sessionId);
+  const store = loadStore();
+  return store.sessions[sessionId];
 }
 
 export function listSessions(): Session[] {
-  return Array.from(sessions.values()).sort(
+  const store = loadStore();
+  return Object.values(store.sessions).sort(
     (a, b) => b.started_at - a.started_at,
   );
 }
 
 export function getEvents(sessionId: string): Event[] {
-  return eventsBySession.get(sessionId) ?? [];
+  const store = loadStore();
+  return store.eventsBySession[sessionId] ?? [];
 }
 
 export function addEvent(event: Event): void {
-  if (!sessions.has(event.sessionId)) {
+  const store = loadStore();
+  if (!store.sessions[event.sessionId]) {
     const session: Session = {
       id: event.sessionId,
       started_at: event.ts,
       status: "running",
     };
-    sessions.set(event.sessionId, session);
+    store.sessions[event.sessionId] = session;
   }
 
-  const events = eventsBySession.get(event.sessionId) ?? [];
+  const events = store.eventsBySession[event.sessionId] ?? [];
   events.push(event);
-  eventsBySession.set(event.sessionId, events);
+  store.eventsBySession[event.sessionId] = events;
+  saveStore(store);
 }
 
 export function updateSessionStatus(
@@ -52,7 +84,8 @@ export function updateSessionStatus(
   status: SessionStatus,
   endedAt?: number,
 ): Session | undefined {
-  const session = sessions.get(sessionId);
+  const store = loadStore();
+  const session = store.sessions[sessionId];
   if (!session) {
     return undefined;
   }
@@ -62,6 +95,7 @@ export function updateSessionStatus(
     status,
     ended_at: endedAt ?? session.ended_at,
   };
-  sessions.set(sessionId, updated);
+  store.sessions[sessionId] = updated;
+  saveStore(store);
   return updated;
 }
