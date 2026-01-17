@@ -9,6 +9,7 @@ import {
   TopPage,
   TimeBreakdownItem,
 } from "@/lib/types";
+import { classifyWorkspace } from "@/lib/classify";
 
 const DEFAULT_RESUME_SUMMARY =
   "Resume insights will appear here once analysis is enabled.";
@@ -21,13 +22,6 @@ const DOMAIN_LABELS: Record<string, string> = {
   "linkedin.com": "Job Search",
   "youtube.com": "Learning",
 };
-
-const IGNORE_DOMAIN_SUBSTRINGS = [
-  "accounts.google.com",
-  "oauth",
-  "consent",
-  "login",
-];
 
 const DOMAIN_ACTIONS: Record<string, string> = {
   "leetcode.com": "Continue LeetCode practice",
@@ -63,6 +57,10 @@ export function computeSummary(
       ]
     : ["(placeholder) Capture next actions after analysis."];
   const timeBreakdown = buildTimeBreakdown(domains, background?.timeSec ?? 0);
+  const focus = buildFocusSummary(domains, session.intent);
+  const resumeUrls = buildResumeUrls(lastStop, domains);
+  const lastStopDomain = lastStop?.domain ?? safeDomain(lastStop?.url ?? "");
+  const lastStopWorkspace = domains.find((domain) => domain.domain === lastStopDomain);
 
   return {
     timeline,
@@ -71,10 +69,18 @@ export function computeSummary(
     timeBreakdown,
     topPages,
     lastStop: lastStop
-      ? { url: lastStop.url, title: lastStop.title, ts: lastStop.ts }
+      ? {
+          url: lastStop.url,
+          title: lastStop.title,
+          ts: lastStop.ts,
+          label: lastStopWorkspace?.label,
+        }
       : undefined,
+    resumeUrls,
+    focus,
+    intent: session.intent ?? null,
     emotionalSummary: buildEmotionalSummary(domains),
-    aiSummary: Boolean(analysis),
+    aiSummary: analysis?.source === "gemini",
     resumeSummary: analysis?.resumeSummary ?? fallbackResumeSummary,
     nextActions: analysis?.nextActions?.length
       ? analysis.nextActions
@@ -130,7 +136,8 @@ function summarizeDomains(timeline: TimelineEvent[]): {
     }
 
     const domain = event.domain ?? safeDomain(event.url);
-    if (isIgnoredDomain(domain)) {
+    const classification = classifyWorkspace(event.url, event.title, domain);
+    if (classification.ignore) {
       backgroundTimeSec += event.durationSec ?? 0;
       backgroundDomains.add(domain);
       if (event.url && !backgroundUrls.includes(event.url)) {
@@ -142,6 +149,7 @@ function summarizeDomains(timeline: TimelineEvent[]): {
     const summary = domainMap.get(domain) ?? {
       domain,
       label: domainLabel(domain),
+      type: classification.type,
       timeSec: 0,
       topUrls: [],
     };
@@ -191,10 +199,6 @@ function domainLabel(domain: string): string {
   return DOMAIN_LABELS[domain] ?? domain;
 }
 
-function isIgnoredDomain(domain: string): boolean {
-  return IGNORE_DOMAIN_SUBSTRINGS.some((value) => domain.includes(value));
-}
-
 function getRecentEntries(
   timeline: TimelineEvent[],
 ): Map<string, { title?: string; url?: string }> {
@@ -204,7 +208,7 @@ function getRecentEntries(
       continue;
     }
     const domain = event.domain ?? safeDomain(event.url);
-    if (isIgnoredDomain(domain)) {
+    if (classifyWorkspace(event.url, event.title, domain).ignore) {
       continue;
     }
     if (!map.has(domain)) {
@@ -280,7 +284,7 @@ function getTopPages(timeline: TimelineEvent[], limit: number): TopPage[] {
       continue;
     }
     const domain = event.domain ?? safeDomain(event.url);
-    if (isIgnoredDomain(domain)) {
+    if (classifyWorkspace(event.url, event.title, domain).ignore) {
       continue;
     }
     if (!event.url || seen.has(event.url)) {
@@ -297,4 +301,108 @@ function getTopPages(timeline: TimelineEvent[], limit: number): TopPage[] {
     }
   }
   return pages;
+}
+
+function buildFocusSummary(domains: DomainSummary[], intent?: string) {
+  const totalTimeSec = domains.reduce((sum, domain) => sum + domain.timeSec, 0);
+  const intentMissing = !intent || !intent.trim();
+  const alignedTimeSec = domains
+    .filter((domain) => alignmentForDomain(intent, domain) === "aligned")
+    .reduce((sum, domain) => sum + domain.timeSec, 0);
+  const neutralTimeSec = domains
+    .filter((domain) => alignmentForDomain(intent, domain) === "neutral")
+    .reduce((sum, domain) => sum + domain.timeSec, 0);
+  const offIntentTimeSec = domains
+    .filter((domain) => alignmentForDomain(intent, domain) === "off-intent")
+    .reduce((sum, domain) => sum + domain.timeSec, 0);
+  const focusScorePct =
+    totalTimeSec > 0 ? Math.round((alignedTimeSec / totalTimeSec) * 100) : 0;
+  const tooShort = totalTimeSec < 300;
+  const displayFocusPct = tooShort || intentMissing
+    ? null
+    : Math.max(25, Math.min(focusScorePct, 95));
+  const topDriftSources = domains
+    .filter((domain) => alignmentForDomain(intent, domain) === "off-intent")
+    .sort((a, b) => b.timeSec - a.timeSec)
+    .slice(0, 3)
+    .map((domain) => ({ domain: domain.domain, timeSec: domain.timeSec }));
+
+  return {
+    totalTimeSec,
+    alignedTimeSec,
+    offIntentTimeSec,
+    neutralTimeSec,
+    focusScorePct,
+    displayFocusPct,
+    tooShort,
+    intentMissing,
+    topDriftSources,
+  };
+}
+
+function alignmentForDomain(
+  intent: string | undefined,
+  domain: DomainSummary,
+): "aligned" | "neutral" | "off-intent" {
+  if (!intent || !intent.trim()) {
+    return "neutral";
+  }
+
+  const normalized = intent.toLowerCase();
+  const mode = inferIntentMode(normalized);
+
+  if (mode === "relax") {
+    if (domain.type === "drift") {
+      return "aligned";
+    }
+    if (domain.type === "primary") {
+      return "off-intent";
+    }
+    return "neutral";
+  }
+
+  if (mode === "content") {
+    if (domain.domain === "youtube.com" || domain.domain === "music.youtube.com") {
+      return "aligned";
+    }
+    if (domain.domain === "netflix.com") {
+      return "off-intent";
+    }
+    return "neutral";
+  }
+
+  if (domain.type === "primary") {
+    return "aligned";
+  }
+  if (domain.type === "drift") {
+    return "off-intent";
+  }
+  return "neutral";
+}
+
+function inferIntentMode(intent: string): "relax" | "content" | "general" {
+  const relaxHints = ["relax", "unwind", "break", "chill", "rest"];
+  const contentHints = ["video", "edit", "youtube", "content", "stream"];
+
+  if (relaxHints.some((hint) => intent.includes(hint))) {
+    return "relax";
+  }
+  if (contentHints.some((hint) => intent.includes(hint))) {
+    return "content";
+  }
+  return "general";
+}
+
+function buildResumeUrls(
+  lastStop: TimelineEvent | undefined,
+  domains: DomainSummary[],
+): string[] {
+  if (!lastStop?.url) {
+    return [];
+  }
+  const domain = lastStop.domain ?? safeDomain(lastStop.url);
+  const workspace = domains.find((entry) => entry.domain === domain);
+  const urls = workspace?.topUrls ?? [];
+  const filtered = urls.filter((url) => url !== lastStop.url);
+  return [lastStop.url, ...filtered.slice(0, 2)];
 }

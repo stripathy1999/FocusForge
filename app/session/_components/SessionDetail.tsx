@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { classifyWorkspace } from "@/lib/classify";
 import { ComputedSummary, Session } from "@/lib/types";
 
 type SessionDetailProps = {
@@ -40,6 +41,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   );
   const [showBackground, setShowBackground] = useState(false);
   const [showFullTimeline, setShowFullTimeline] = useState(false);
+  const [intentInput, setIntentInput] = useState(session.intent ?? "");
+  const [isSavingIntent, setIsSavingIntent] = useState(false);
   const keyTimeline = showFullTimeline
     ? timeline
     : buildKeyTimeline(timeline, computedSummary.lastStop?.ts);
@@ -47,6 +50,26 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const handleReopen = (urls: string[]) => {
     window.postMessage({ type: "FOCUSFORGE_REOPEN", urls }, "*");
     urls.forEach((url) => window.open(url, "_blank", "noopener,noreferrer"));
+  };
+
+  const handleSaveIntent = async () => {
+    if (!intentInput.trim()) {
+      return;
+    }
+    setIsSavingIntent(true);
+    try {
+      await fetch("/api/session/intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: session.id,
+          intent: intentInput.trim(),
+        }),
+      });
+      window.location.reload();
+    } finally {
+      setIsSavingIntent(false);
+    }
   };
 
   return (
@@ -76,9 +99,14 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   className="text-xs text-blue-600 underline-offset-4 hover:underline"
                   onClick={() => setShowFullTimeline((value) => !value)}
                 >
-                  {showFullTimeline ? "Show key transitions" : "Show full timeline"}
+                  {showFullTimeline ? "Show key moments" : "View full timeline"}
                 </button>
               </div>
+              {!showFullTimeline && (
+                <p className="mt-1 text-xs text-zinc-500">
+                  Showing key moments · View full timeline
+                </p>
+              )}
               <div className="mt-4 flex flex-col gap-4">
                 {keyTimeline.length === 0 ? (
                   <p className="text-sm text-zinc-500">
@@ -245,6 +273,59 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               )}
             </div>
             <div className="mt-4 space-y-6 text-sm text-zinc-700">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-zinc-500">
+                    Session Intent
+                  </p>
+                  {computedSummary.intent ? (
+                    <p className="mt-2 text-sm text-zinc-800">
+                      {computedSummary.intent}
+                    </p>
+                  ) : (
+                    <div className="mt-2 flex flex-col gap-2">
+                      <input
+                        value={intentInput}
+                        onChange={(event) => setIntentInput(event.target.value)}
+                        placeholder="What are you focusing on right now?"
+                        className="rounded-md border border-zinc-200 px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        className="inline-flex w-fit items-center rounded-md bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-60"
+                        onClick={handleSaveIntent}
+                        disabled={isSavingIntent || !intentInput.trim()}
+                      >
+                        Save intent
+                      </button>
+                    </div>
+                  )}
+                </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-60"
+                  onClick={() =>
+                    computedSummary.resumeUrls.length
+                      ? handleReopen(computedSummary.resumeUrls)
+                      : null
+                  }
+                  disabled={computedSummary.resumeUrls.length === 0}
+                >
+                  ✅ Resume where I left off
+                </button>
+                <button
+                  type="button"
+                  className="text-left text-xs text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
+                  onClick={() =>
+                    computedSummary.lastStop?.url
+                      ? handleReopen([computedSummary.lastStop.url])
+                      : null
+                  }
+                  disabled={!computedSummary.lastStop?.url}
+                >
+                  Open last stop only
+                </button>
+              </div>
               <p className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
                 {computedSummary.emotionalSummary}
               </p>
@@ -335,6 +416,52 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wide text-zinc-500">
+                  Intent Alignment
+                </p>
+                <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs text-zinc-600">
+                  {computedSummary.focus.intentMissing ? (
+                    <div className="text-sm font-semibold text-zinc-900">
+                      Time split across different activities
+                    </div>
+                  ) : computedSummary.focus.tooShort ? (
+                    <div className="text-sm font-semibold text-zinc-900">
+                      Session too short to assess focus
+                    </div>
+                  ) : (
+                    <div className="text-2xl font-semibold text-zinc-900">
+                      {computedSummary.focus.displayFocusPct}% Aligned
+                    </div>
+                  )}
+                  <div className="mt-1">
+                    Aligned{" "}
+                    {formatDuration(computedSummary.focus.alignedTimeSec)} •
+                    Off-intent{" "}
+                    {formatDuration(computedSummary.focus.offIntentTimeSec)} •
+                    Neutral{" "}
+                    {formatDuration(computedSummary.focus.neutralTimeSec)}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {computedSummary.focus.topDriftSources.length === 0 ? (
+                      <span className="text-zinc-500">No off-intent tabs.</span>
+                    ) : (
+                      computedSummary.focus.topDriftSources.map((source) => (
+                        <span
+                          key={source.domain}
+                          className="rounded-full bg-white px-2 py-1 text-[11px] text-zinc-700 shadow-sm"
+                        >
+                          {prettyDomain(source.domain)} (
+                          {formatDuration(source.timeSec)})
+                        </span>
+                      ))
+                    )}
+                  </div>
+                  <p className="mt-3 text-[11px] text-zinc-500">
+                    No guilt, this just helps you snap back faster.
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-zinc-500">
                   Pending Decisions
                 </p>
                 <ul className="mt-2 list-disc pl-5">
@@ -378,25 +505,45 @@ function buildKeyTimeline(
   timeline: ComputedSummary["timeline"],
   lastStopTs?: number,
 ) {
-  const keyEvents: ComputedSummary["timeline"] = [];
-  let lastDomain: string | undefined;
-
-  for (const event of timeline) {
+  const meaningful = timeline.filter((event) => {
     if (event.type !== "TAB_ACTIVE") {
-      continue;
+      return false;
     }
-    if (keyEvents.length === 0 || event.domain !== lastDomain) {
-      keyEvents.push(event);
-      lastDomain = event.domain;
-    }
+    const domain = event.domain ?? "unknown";
+    return !classifyWorkspace(event.url ?? "", event.title ?? "", domain).ignore;
+  });
+
+  if (meaningful.length === 0) {
+    return [];
   }
 
-  if (lastStopTs) {
-    const lastStop = timeline.find((event) => event.ts === lastStopTs);
-    if (lastStop && !keyEvents.includes(lastStop)) {
-      keyEvents.push(lastStop);
-    }
-  }
+  const first = meaningful[0];
+  const lastThree = meaningful.slice(-3);
+  const lastStop = lastStopTs
+    ? meaningful.find((event) => event.ts === lastStopTs)
+    : undefined;
 
-  return keyEvents;
+  const selected = [first, ...lastThree, ...(lastStop ? [lastStop] : [])];
+  const keys = new Set(
+    selected.map((event) => `${event.ts}-${event.url ?? ""}`),
+  );
+
+  return timeline.filter((event) =>
+    keys.has(`${event.ts}-${event.url ?? ""}`),
+  );
+}
+
+function prettyDomain(domain: string) {
+  const map: Record<string, string> = {
+    "youtube.com": "YouTube",
+    "music.youtube.com": "YouTube Music",
+    "reddit.com": "Reddit",
+    "instagram.com": "Instagram",
+    "x.com": "X",
+    "twitter.com": "Twitter",
+    "tiktok.com": "TikTok",
+    "netflix.com": "Netflix",
+  };
+
+  return map[domain] ?? domain;
 }

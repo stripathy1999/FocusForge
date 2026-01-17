@@ -15,6 +15,7 @@ export type Session = {
   started_at: number;
   ended_at?: number;
   status: SessionStatus;
+  intent?: string;
 };
 
 export type TimelineEvent = Event & {
@@ -25,6 +26,7 @@ export type TimelineEvent = Event & {
 export type DomainSummary = {
   domain: string;
   label: string;
+  type: "primary" | "support" | "drift";
   timeSec: number;
   topUrls: string[];
 };
@@ -48,6 +50,7 @@ export type TopPage = {
 };
 
 export type AnalysisResult = {
+  source: "gemini";
   resumeSummary: string;
   nextActions: string[];
   pendingDecisions: string[];
@@ -59,7 +62,20 @@ export type ComputedSummary = {
   background?: BackgroundSummary;
   timeBreakdown: TimeBreakdownItem[];
   topPages: TopPage[];
-  lastStop?: { url: string; title: string; ts: number };
+  lastStop?: { url: string; title: string; ts: number; label?: string };
+  resumeUrls: string[];
+  focus: {
+    totalTimeSec: number;
+    alignedTimeSec: number;
+    offIntentTimeSec: number;
+    neutralTimeSec: number;
+    focusScorePct: number;
+    displayFocusPct: number | null;
+    tooShort: boolean;
+    intentMissing: boolean;
+    topDriftSources: { domain: string; timeSec: number }[];
+  };
+  intent: string | null;
   emotionalSummary: string;
   aiSummary: boolean;
   resumeSummary: string;

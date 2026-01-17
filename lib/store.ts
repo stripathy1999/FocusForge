@@ -32,13 +32,14 @@ function saveStore(store: StoreData): void {
   fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
 }
 
-export function createSession(): Session {
+export function createSession(intent?: string): Session {
   const store = loadStore();
   const id = randomUUID();
   const session: Session = {
     id,
     started_at: Date.now(),
     status: "running",
+    intent: intent?.trim() ? intent.trim() : undefined,
   };
 
   store.sessions[id] = session;
@@ -96,6 +97,24 @@ export function updateSessionStatus(
     ...session,
     status,
     ended_at: endedAt ?? session.ended_at,
+  };
+  store.sessions[sessionId] = updated;
+  saveStore(store);
+  return updated;
+}
+
+export function updateSessionIntent(
+  sessionId: string,
+  intent: string,
+): Session | undefined {
+  const store = loadStore();
+  const session = store.sessions[sessionId];
+  if (!session) {
+    return undefined;
+  }
+  const updated: Session = {
+    ...session,
+    intent: intent.trim() ? intent.trim() : undefined,
   };
   store.sessions[sessionId] = updated;
   saveStore(store);
