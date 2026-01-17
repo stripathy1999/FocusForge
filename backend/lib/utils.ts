@@ -19,15 +19,16 @@ export function extractDomain(url: string): string {
 
 /**
  * Safe default analysis JSON for when analysis fails
+ * Matches the schema expected by the frontend and returned by the analyzer
  */
 export function getSafeDefaultAnalysis(): any {
   return {
-    resumeSummary: "Session captured. Resume when ready.",
-    workspaces: [],
-    nextActions: [],
-    pendingDecisions: [],
     goalInferred: "",
-    lastStop: { label: "Unknown", url: "" }
+    workspaces: [],
+    resumeSummary: "Session captured. Resume when ready.",
+    lastStop: { label: "Unknown", url: "" },
+    nextActions: [],
+    pendingDecisions: []
   }
 }
 
