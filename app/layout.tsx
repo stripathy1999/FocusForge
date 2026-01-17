@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Jura, Lato } from "next/font/google";
 import "./globals.css";
 
+// Font loaders require all values to be literals, not dynamic config
+// Theme config in next.config.ts is for reference/documentation and colors only
 const jura = Jura({
   variable: "--font-jura",
   subsets: ["latin"],
