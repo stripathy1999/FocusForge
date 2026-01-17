@@ -15,26 +15,91 @@ except ImportError:
     print("Warning: google-generativeai not installed. Gemini features will be disabled.")
 
 
-GEMINI_PROMPT = """You are FocusForge, an assistant that analyzes browser activity from a single focus session. Return ONLY valid JSON that matches the schema below. No backticks. No explanations. Constraints: limit workspaces to max 5. nextActions max 5 and each starts with a verb. pendingDecisions max 3. resumeSummary 1–2 sentences. Do not invent websites, events, or facts not in the input. lastStop.url must be present in the input events. Labels should be short and human-friendly.
+GEMINI_PROMPT = """You are FocusForge, an assistant that analyzes browser activity from a single focus session. Return ONLY valid JSON that matches the schema below. No backticks. No explanations.
+
+CRITICAL: resumeSummary Guidelines
+- Write in natural, conversational language (1-2 sentences)
+- Group activities by INTENTION/PURPOSE, not by individual websites
+- Use SERVICE NAMES (e.g., "Canva", "Netflix", "Google Docs", "GitHub") - NEVER use full URLs or domains
+- Describe WHAT the user was doing, not WHERE they were browsing
+- Use action verbs: designing, researching, applying, coding, learning, etc.
+
+Examples of GOOD summaries:
+✓ "You were switching between designing on Canva and applying for jobs on Netflix"
+✓ "You spent time researching on Wikipedia and coding on GitHub"
+✓ "You were working on job applications, switching between LinkedIn and company career pages"
+✓ "You were learning by reading documentation and practicing on LeetCode"
+
+Examples of BAD summaries (DO NOT DO THIS):
+✗ "You were switching between www.canva.com and explore.jobs.netflix.net"
+✗ "You visited wikipedia.org and github.com"
+✗ "You were on canva.com, then netflix.net, then back to canva.com"
+
+Other constraints: limit workspaces to max 5. nextActions max 5 and each starts with a verb. pendingDecisions max 3. Do not invent websites, events, or facts not in the input. lastStop.url must be present in the input events. Labels should be short and human-friendly.
 
 Schema:
 { "goalInferred":"string", "workspaces":[{"label":"string","timeSec":0,"topUrls":["string"]}], "resumeSummary":"string", "lastStop":{"label":"string","url":"string"}, "nextActions":["string"], "pendingDecisions":["string"] }"""
 
 
+def extract_service_name(url: str) -> str:
+    """Extract a human-readable service name from URL."""
+    from urllib.parse import urlparse
+    import re
+    
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc or parsed.path
+        
+        # Remove www. prefix
+        domain = re.sub(r'^www\.', '', domain, flags=re.IGNORECASE)
+        
+        # Split by dots and get the main domain part (usually second-to-last)
+        parts = domain.split('.')
+        if len(parts) >= 2:
+            # For "explore.jobs.netflix.net", get "netflix"
+            # For "docs.google.com", get "google"
+            # For "canva.com", get "canva"
+            main_part = parts[-2] if len(parts) > 2 else parts[0]
+        else:
+            main_part = parts[0] if parts else "unknown"
+        
+        # Capitalize first letter
+        return main_part.capitalize() if main_part else "Unknown"
+    except Exception:
+        return "Unknown"
+
+
 def create_gemini_input(goal: str, events: List[Dict], workspaces: List[Dict], last_stop: Dict) -> str:
-    """Create input string for Gemini analysis."""
+    """Create input string for Gemini analysis with enhanced context."""
+    from analyzer import extract_domain
+    
     events_summary = []
     for event in events:
+        url = event.get("url", "")
+        domain = extract_domain(url)
+        service_name = extract_service_name(url)
+        
         events_summary.append({
-            "url": event.get("url", ""),
+            "url": url,
             "title": event.get("title", ""),
-            "durationSec": event.get("durationSec", 0)
+            "durationSec": event.get("durationSec", 0),
+            "domain": domain,
+            "service": service_name  # Add service name for better context
         })
+    
+    # Enhance workspaces with service names
+    enhanced_workspaces = []
+    for ws in workspaces:
+        enhanced_ws = ws.copy()
+        # Extract service names from top URLs
+        service_names = [extract_service_name(url) for url in ws.get("topUrls", [])]
+        enhanced_ws["services"] = list(set(service_names))  # Unique service names
+        enhanced_workspaces.append(enhanced_ws)
     
     input_data = {
         "goal": goal,
         "events": events_summary,
-        "workspaces": workspaces,
+        "workspaces": enhanced_workspaces,
         "lastStop": last_stop
     }
     
@@ -82,7 +147,14 @@ def call_gemini(goal: str, events: List[Dict], workspaces: List[Dict], last_stop
     
     # Configure Gemini
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-pro')
+    # Use gemini-2.5-flash (faster, cheaper) or gemini-2.5-pro (more capable)
+    # gemini-pro is deprecated - use gemini-pro-latest as fallback
+    model_name = 'gemini-2.5-flash'
+    try:
+        model = genai.GenerativeModel(model_name)
+    except Exception:
+        # Fallback to latest available version
+        model = genai.GenerativeModel('gemini-pro-latest')
     
     # Create input
     gemini_input = create_gemini_input(goal, events, workspaces, last_stop)
@@ -99,6 +171,10 @@ def call_gemini(goal: str, events: List[Dict], workspaces: List[Dict], last_stop
             )
         )
         
+        # Check if response has text
+        if not hasattr(response, 'text') or not response.text:
+            raise ValueError("Gemini returned empty response. This may happen with large prompts or rate limiting.")
+        
         response_text = response.text
         cleaned_response = clean_json_response(response_text)
         
@@ -111,13 +187,34 @@ def call_gemini(goal: str, events: List[Dict], workspaces: List[Dict], last_stop
                 # Retry with stricter instruction
                 retry_prompt = "Output only valid JSON.\n\n" + full_prompt
                 retry_response = model.generate_content(retry_prompt)
+                if not hasattr(retry_response, 'text') or not retry_response.text:
+                    raise ValueError("Gemini returned empty response on retry.")
                 retry_text = clean_json_response(retry_response.text)
-                return json.loads(retry_text)
+                try:
+                    return json.loads(retry_text)
+                except json.JSONDecodeError as retry_error:
+                    raise ValueError(
+                        f"Failed to parse Gemini response as JSON after retry: {retry_error}\n"
+                        f"Original response: {response_text}\n"
+                        f"Retry response: {retry_text}"
+                    )
             else:
                 raise ValueError(f"Failed to parse Gemini response as JSON: {e}\nResponse: {response_text}")
                 
+    except ValueError as e:
+        # Re-raise ValueError as-is (these are our custom errors)
+        raise
     except Exception as e:
-        raise RuntimeError(f"Gemini API call failed: {e}")
+        # Handle other exceptions (API errors, network errors, etc.)
+        error_msg = str(e)
+        if "API key" in error_msg or "authentication" in error_msg.lower():
+            raise ValueError(f"Gemini API authentication failed: {error_msg}\nPlease check your GEMINI_API_KEY environment variable.")
+        elif "quota" in error_msg.lower() or "429" in error_msg:
+            raise RuntimeError(f"Gemini API rate limit exceeded: {error_msg}\nPlease wait and try again later.")
+        elif "500" in error_msg or "internal" in error_msg.lower():
+            raise RuntimeError(f"Gemini API server error: {error_msg}\nThis is a temporary issue, please try again.")
+        else:
+            raise RuntimeError(f"Gemini API call failed: {error_msg}\nOriginal error type: {type(e).__name__}")
 
 
 def validate_output(output: Dict[str, Any], events: List[Dict]) -> bool:
