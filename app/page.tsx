@@ -133,7 +133,8 @@ export default async function Home() {
                   </div>
                   <Link
                     href={`/session/${session.id}`}
-                    className="text-blue-600 underline"
+                    className="underline"
+                    style={{ color: '#4AB5C9' }}
                   >
                     Open
                   </Link>
