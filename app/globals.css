@@ -42,3 +42,103 @@ body {
 @utility font-jura {
   font-family: var(--font-jura), sans-serif;
 }
+
+/* Mobile phone media queries */
+@media (max-width: 768px) {
+  /* Reduce base font size for mobile */
+  body {
+    font-size: 14px;
+  }
+  
+  /* Adjust main page container padding */
+  div[style*="background-color: #BDE8F5"] {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  
+  /* Reduce header/section padding */
+  header,
+  section {
+    padding: 1.5rem !important;
+  }
+  
+  /* Adjust logo sizes */
+  img[alt="FocusForge"] {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  
+  /* Adjust large title text (90px) */
+  h1.text-\[90px\] {
+    font-size: 2.5rem !important;
+    line-height: 1.1 !important;
+  }
+  
+  /* Adjust subtitle (text-3xl) */
+  h2.text-3xl {
+    font-size: 1.25rem !important;
+  }
+  
+  /* Stack buttons vertically on mobile */
+  .flex.flex-wrap.gap-3 {
+    flex-direction: column !important;
+  }
+  
+  .flex.flex-wrap.gap-3 > * {
+    width: 100% !important;
+  }
+  
+  /* Adjust section padding */
+  section.rounded-2xl {
+    padding: 1rem !important;
+  }
+  
+  /* Make session cards more compact */
+  .flex.flex-col.gap-3.rounded-lg {
+    padding: 0.75rem !important;
+  }
+}
+
+/* Small mobile phones (480px and below) */
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+  
+  /* Further reduce padding on very small screens */
+  div[style*="background-color: #BDE8F5"] {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+  
+  header,
+  section {
+    padding: 1rem !important;
+  }
+  
+  img[alt="FocusForge"] {
+    width: 50px !important;
+    height: 50px !important;
+  }
+  
+  h1.text-\[90px\] {
+    font-size: 2rem !important;
+  }
+  
+  h2.text-3xl {
+    font-size: 1.125rem !important;
+  }
+  
+  /* Adjust text sizes for better readability */
+  .text-2xl {
+    font-size: 1.25rem !important;
+  }
+  
+  .text-lg {
+    font-size: 1rem !important;
+  }
+}
