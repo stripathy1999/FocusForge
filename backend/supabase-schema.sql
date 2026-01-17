@@ -4,9 +4,11 @@
 -- Create sessions table
 CREATE TABLE IF NOT EXISTS sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'ended')),
   started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   ended_at TIMESTAMP WITH TIME ZONE,
-  status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'ended', 'analyzed'))
+  intent_text TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create events table
@@ -16,6 +18,8 @@ CREATE TABLE IF NOT EXISTS events (
   ts BIGINT NOT NULL,
   url TEXT NOT NULL,
   title TEXT,
+  duration_sec INTEGER,
+  domain TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -30,6 +34,7 @@ CREATE TABLE IF NOT EXISTS analysis (
 CREATE INDEX IF NOT EXISTS idx_events_session_id ON events(session_id);
 CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+CREATE INDEX IF NOT EXISTS idx_events_domain ON events(domain);
 
 -- Disable RLS for hackathon (as per requirements)
 ALTER TABLE sessions DISABLE ROW LEVEL SECURITY;

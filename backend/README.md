@@ -66,6 +66,13 @@ ALTER TABLE analysis DISABLE ROW LEVEL SECURITY;
 ### POST /api/session/start
 Creates a new session.
 
+**Body (optional):**
+```json
+{
+  "intent_text": "Optional user intent/goal"
+}
+```
+
 **Response:**
 ```json
 {
@@ -73,8 +80,46 @@ Creates a new session.
 }
 ```
 
+### POST /api/session/pause
+Pauses an active session.
+
+**Body:**
+```json
+{
+  "sessionId": "uuid"
+}
+```
+
+### POST /api/session/resume
+Resumes a paused session.
+
+**Body:**
+```json
+{
+  "sessionId": "uuid"
+}
+```
+
+### POST /api/session/end
+Ends a session and triggers analysis. Returns safe defaults if analysis fails.
+
+**Body:**
+```json
+{
+  "sessionId": "uuid"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Session ended and analyzed"
+}
+```
+
 ### POST /api/event
-Stores a browser event.
+Stores a browser event. Automatically calculates duration and domain. Tolerant to duplicates/malformed data.
 
 **Body:**
 ```json
@@ -94,47 +139,51 @@ Stores a browser event.
 }
 ```
 
-### POST /api/session/end
-Ends a session and triggers analysis.
-
-**Body:**
-```json
-{
-  "sessionId": "uuid"
-}
-```
+### GET /api/sessions
+Gets all sessions, ordered by created_at descending.
 
 **Response:**
 ```json
 {
-  "success": true,
-  "message": "Session ended and analyzed"
+  "sessions": [
+    {
+      "id": "uuid",
+      "status": "active",
+      "started_at": "2024-01-01T00:00:00Z",
+      "ended_at": null,
+      "intent_text": "Optional intent",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
 }
 ```
 
 ### GET /api/session/:id
-Gets session data with events and analysis.
+Gets session data with events and analysis. Analysis is sanitized for safety.
 
 **Response:**
 ```json
 {
   "session": {
     "id": "uuid",
+    "status": "active",
     "started_at": "2024-01-01T00:00:00Z",
-    "ended_at": "2024-01-01T01:00:00Z",
-    "status": "analyzed"
+    "ended_at": null,
+    "intent_text": "Optional intent",
+    "created_at": "2024-01-01T00:00:00Z"
   },
   "events": [...],
   "analysis": {
-    "goalInferred": "...",
+    "resumeSummary": "...",
     "workspaces": [...],
-    ...
+    "nextActions": [...],
+    "pendingDecisions": [...]
   }
 }
 ```
 
 ### GET /api/session/:id/eventsWithDuration
-Gets events with calculated duration.
+Gets events with duration (uses stored duration_sec or calculates if missing).
 
 **Response:**
 ```json
@@ -146,6 +195,8 @@ Gets events with calculated duration.
       "ts": 1730000000000,
       "url": "https://example.com",
       "title": "Example",
+      "duration_sec": 30,
+      "domain": "example.com",
       "durationSec": 30
     }
   ]

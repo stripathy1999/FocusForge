@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
-import { EventWithDuration } from '@/lib/db.types'
 
 export default async function handler(
   req: NextApiRequest,
@@ -33,18 +32,21 @@ export default async function handler(
       return res.status(200).json({ events: [] })
     }
 
-    // Calculate durationSec for each event
-    const eventsWithDuration: EventWithDuration[] = events.map((event, index) => {
-      const nextEvent = events[index + 1]
+    // Use stored duration_sec or calculate if missing
+    const eventsWithDuration = events.map((event, index) => {
+      let durationSec = event.duration_sec
       
-      // For last event, use default duration (30-60s)
-      const durationSec = nextEvent 
-        ? Math.floor((nextEvent.ts - event.ts) / 1000)
-        : 30 // Default 30s for last event
+      // If duration_sec is not stored, calculate it
+      if (!durationSec || durationSec <= 0) {
+        const nextEvent = events[index + 1]
+        durationSec = nextEvent 
+          ? Math.max(1, Math.floor((nextEvent.ts - event.ts) / 1000))
+          : 30 // Default 30s for last event
+      }
       
       return {
         ...event,
-        durationSec: Math.max(1, durationSec) // Ensure at least 1 second
+        durationSec: durationSec
       }
     })
 

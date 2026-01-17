@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
+import { sanitizeAnalysis } from '@/lib/utils'
 
 export default async function handler(
   req: NextApiRequest,
@@ -51,15 +52,23 @@ export default async function handler(
       console.error('Error fetching analysis:', analysisError)
     }
 
+    // Sanitize analysis if it exists
+    let safeAnalysis = null
+    if (analysis?.summary_json) {
+      safeAnalysis = sanitizeAnalysis(analysis.summary_json)
+    }
+
     return res.status(200).json({
       session: {
         id: session.id,
+        status: session.status,
         started_at: session.started_at,
         ended_at: session.ended_at,
-        status: session.status
+        intent_text: session.intent_text,
+        created_at: session.created_at
       },
       events: events || [],
-      analysis: analysis?.summary_json || null
+      analysis: safeAnalysis
     })
   } catch (error: any) {
     console.error('Unexpected error:', error)
