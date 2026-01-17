@@ -9,6 +9,7 @@ export async function runGeminiAnalysis(
 ): Promise<AnalysisResult | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    console.warn("[Gemini] Missing GEMINI_API_KEY");
     return null;
   }
 
@@ -18,6 +19,10 @@ export async function runGeminiAnalysis(
   }
   const events = getEvents(sessionId);
   const summary = computeSummary(session, events);
+  console.info("[Gemini] Starting analysis", {
+    sessionId,
+    events: events.length,
+  });
 
   const prompt = buildPrompt(summary);
   const response = await fetch(
@@ -35,7 +40,9 @@ export async function runGeminiAnalysis(
   );
 
   if (!response.ok) {
-    console.warn("Gemini request failed", response.status, response.statusText);
+    const errorText = await response.text();
+    console.warn("[Gemini] Request failed", response.status, response.statusText);
+    console.warn("[Gemini] Error body", errorText.slice(0, 500));
     return null;
   }
 
@@ -43,6 +50,9 @@ export async function runGeminiAnalysis(
     candidates?: { content?: { parts?: { text?: string }[] } }[];
   };
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  if (!text) {
+    console.warn("[Gemini] Empty response text");
+  }
   const parsed = safeParseJson(text);
   const analysis: AnalysisResult = parsed
     ? {
@@ -60,6 +70,10 @@ export async function runGeminiAnalysis(
   if (!analysis.resumeSummary) {
     return null;
   }
+  console.info("[Gemini] Analysis stored", {
+    sessionId,
+    hasResume: Boolean(analysis.resumeSummary),
+  });
   setAnalysis(sessionId, analysis);
   return analysis;
 }

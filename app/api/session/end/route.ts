@@ -29,9 +29,11 @@ export async function POST(request: Request) {
   });
 
   try {
+    console.info("[Gemini] Triggered for session", body.sessionId);
     await runGeminiAnalysis(body.sessionId);
   } catch {
     // Ignore analysis failures; deterministic summary is the fallback.
+    console.warn("[Gemini] Analysis failed for session", body.sessionId);
   }
 
   return NextResponse.json({ ok: true });
