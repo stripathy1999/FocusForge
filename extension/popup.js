@@ -7,6 +7,8 @@ const stopBtn = document.getElementById("stopBtn");
 const sessionIdEl = document.getElementById("sessionId");
 const baseUrlInput = document.getElementById("baseUrlInput");
 const saveBaseUrlBtn = document.getElementById("saveBaseUrlBtn");
+const intentInput = document.getElementById("intentInput");
+const saveIntentBtn = document.getElementById("saveIntentBtn");
 const resumePrompt = document.getElementById("resumePrompt");
 const startFreshBtn = document.getElementById("startFreshBtn");
 const continueLastBtn = document.getElementById("continueLastBtn");
@@ -18,6 +20,7 @@ async function getState() {
     "paused",
     "baseUrl",
     "autoEndedSessionId",
+    "intent",
   ]);
 }
 
@@ -50,11 +53,15 @@ function render(state) {
   pauseBtn.textContent = paused ? "Resume" : "Pause";
   sessionIdEl.textContent = state.sessionId || "—";
   baseUrlInput.value = state.baseUrl || DEFAULT_BASE_URL;
+  if (intentInput && document.activeElement !== intentInput) {
+    intentInput.value = state.intent || "";
+  }
 
-  startBtn.disabled = running;
+  const hasIntent = Boolean((intentInput?.value || state.intent || "").trim());
+  startBtn.disabled = running || !hasIntent;
   pauseBtn.disabled = !running;
   stopBtn.disabled = !running;
-  startBtn.style.opacity = running ? "0.6" : "1";
+  startBtn.style.opacity = startBtn.disabled ? "0.6" : "1";
   pauseBtn.style.opacity = running ? "1" : "0.6";
   stopBtn.style.opacity = running ? "1" : "0.6";
 
@@ -64,7 +71,14 @@ function render(state) {
 }
 
 async function handleStart() {
-  const response = await apiPost("/api/session/start", {});
+  const intent = intentInput?.value?.trim() || "";
+  if (!intent) {
+    statusText.textContent = "Status: Add an intent to start";
+    return;
+  }
+  const response = await apiPost("/api/session/start", {
+    intent,
+  });
   if (!response.ok) {
     statusText.textContent = "Status: Error starting session";
     return;
@@ -75,6 +89,7 @@ async function handleStart() {
     status: "running",
     paused: false,
     autoEndedSessionId: undefined,
+    intent,
   });
   render(await getState());
 }
@@ -137,7 +152,12 @@ async function handleStop() {
 }
 
 async function handleStartFresh() {
-  const response = await apiPost("/api/session/start", {});
+  const intent = intentInput?.value?.trim() || "";
+  if (!intent) {
+    statusText.textContent = "Status: Add an intent to start";
+    return;
+  }
+  const response = await apiPost("/api/session/start", { intent });
   if (!response.ok) {
     statusText.textContent = "Status: Error starting session";
     return;
@@ -148,6 +168,7 @@ async function handleStartFresh() {
     status: "running",
     paused: false,
     autoEndedSessionId: undefined,
+    intent,
   });
   render(await getState());
 }
@@ -183,11 +204,34 @@ async function handleSaveBaseUrl() {
   render(await getState());
 }
 
+async function handleSaveIntent() {
+  const intent = intentInput?.value?.trim() || "";
+  const state = await getState();
+  await setState({ intent });
+
+  if (!state.sessionId) {
+    render(await getState());
+    return;
+  }
+
+  const response = await apiPost("/api/session/intent", {
+    sessionId: state.sessionId,
+    intent,
+  });
+  if (!response.ok) {
+    statusText.textContent = "Status: Error saving intent";
+    return;
+  }
+  render(await getState());
+}
+
 startBtn.addEventListener("click", handleStart);
+intentInput?.addEventListener("input", async () => render(await getState()));
 pauseBtn.addEventListener("click", handlePauseToggle);
 stopBtn.addEventListener("click", handleStop);
 saveBaseUrlBtn.addEventListener("click", handleSaveBaseUrl);
 startFreshBtn?.addEventListener("click", handleStartFresh);
 continueLastBtn?.addEventListener("click", handleContinueLast);
+saveIntentBtn?.addEventListener("click", handleSaveIntent);
 
 getState().then(render);

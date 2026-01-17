@@ -84,12 +84,17 @@ function buildPrompt(summary: ReturnType<typeof computeSummary>): string {
     .map((domain) => `- ${domain.label}: ${domain.timeSec}s`)
     .join("\n");
   const lastStop = summary.lastStop?.title || summary.lastStop?.url || "unknown";
+  const intent = summary.intent_tags.length
+    ? summary.intent_tags.join(", ")
+    : "none provided";
 
   return [
     "You are assisting a productivity app. Return ONLY valid JSON.",
     "Fields: resumeSummary (string), nextActions (string[]), pendingDecisions (string[]).",
     "Be concise, human, and specific. No markdown.",
+    "If intent is empty, do not infer strongly; stay neutral.",
     "",
+    `Intent: ${intent}`,
     `Workspaces:\n${workspaces}`,
     `Last stop: ${lastStop}`,
   ].join("\n");

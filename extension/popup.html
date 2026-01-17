@@ -70,9 +70,17 @@
     <h1>FocusForge</h1>
     <div class="status" id="statusText">Status: Stopped</div>
 
-    <div class="row">
+    <div class="label">Session intent</div>
+    <input
+      id="intentInput"
+      placeholder="What are you focusing on? (comma-separated)"
+    />
+    <div class="row" style="margin-top: 8px">
       <button class="primary" id="startBtn">Start</button>
       <button class="secondary" id="pauseBtn">Pause</button>
+    </div>
+    <div class="row" style="margin-top: 4px">
+      <button class="secondary" id="saveIntentBtn">Save intent</button>
     </div>
     <div class="row">
       <button class="danger" id="stopBtn">Stop</button>

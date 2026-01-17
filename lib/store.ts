@@ -140,7 +140,7 @@ function parseIntent(intentRaw?: string): {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean)
-    .slice(0, 10);
+    .slice(0, 5);
   return {
     intentRaw: raw,
     intentTags: tags,
