@@ -16,6 +16,15 @@ const DOMAIN_LABELS: Record<string, string> = {
   "youtube.com": "Learning",
 };
 
+const IGNORE_DOMAIN_SUBSTRINGS = ["accounts.google.com", "oauth", "consent", "login"];
+
+const DOMAIN_ACTIONS: Record<string, string> = {
+  "leetcode.com": "Continue LeetCode practice set",
+  "docs.google.com": "Resume writing in Google Docs",
+  "linkedin.com": "Open LinkedIn and shortlist roles to apply to",
+  "youtube.com": "Resume the learning video",
+};
+
 export function computeSummary(
   session: Session,
   events: Event[],
@@ -23,6 +32,7 @@ export function computeSummary(
   const sorted = [...events].sort((a, b) => a.ts - b.ts);
   const timeline = addDurations(session, sorted);
   const domains = summarizeDomains(timeline);
+  const recentTitles = getRecentTitles(timeline);
   const lastStop = [...timeline]
     .reverse()
     .find((event) => event.type === "TAB_ACTIVE");
@@ -34,7 +44,9 @@ export function computeSummary(
   const nextActions = topDomain
     ? domains
         .slice(0, 2)
-        .map((domain) => `Continue ${domain.label} tasks`)
+        .map((domain) =>
+          formatAction(domain.domain, domain.label, recentTitles.get(domain.domain)),
+        )
     : ["(placeholder) Capture next actions after analysis."];
 
   return {
@@ -90,6 +102,9 @@ function summarizeDomains(timeline: TimelineEvent[]): DomainSummary[] {
     }
 
     const domain = event.domain ?? safeDomain(event.url);
+    if (isIgnoredDomain(domain)) {
+      continue;
+    }
     const duration = event.durationSec ?? 0;
     const summary = domainMap.get(domain) ?? {
       domain,
@@ -131,4 +146,40 @@ function safeDomain(url: string): string {
 
 function domainLabel(domain: string): string {
   return DOMAIN_LABELS[domain] ?? domain;
+}
+
+function isIgnoredDomain(domain: string): boolean {
+  return IGNORE_DOMAIN_SUBSTRINGS.some((value) => domain.includes(value));
+}
+
+function getRecentTitles(timeline: TimelineEvent[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const event of [...timeline].reverse()) {
+    if (event.type !== "TAB_ACTIVE") {
+      continue;
+    }
+    const domain = event.domain ?? safeDomain(event.url);
+    if (isIgnoredDomain(domain)) {
+      continue;
+    }
+    if (!map.has(domain) && event.title) {
+      map.set(domain, event.title);
+    }
+  }
+  return map;
+}
+
+function formatAction(
+  domain: string,
+  label: string,
+  title?: string,
+): string {
+  if (domain in DOMAIN_ACTIONS) {
+    const base = DOMAIN_ACTIONS[domain];
+    return title ? `${base}: ${title}` : base;
+  }
+  if (title) {
+    return `Continue ${label}: ${title}`;
+  }
+  return `Resume ${label}`;
 }

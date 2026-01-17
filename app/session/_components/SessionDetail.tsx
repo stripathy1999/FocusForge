@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import { ComputedSummary, Session } from "@/lib/types";
@@ -76,17 +78,27 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       <div className="mt-2 text-sm font-medium text-zinc-900">
                         {event.title || "Untitled tab"}
                       </div>
-                      {event.url ? (
-                        <a
-                          className="mt-1 block text-xs text-blue-600 underline-offset-4 hover:underline"
-                          href={event.url}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
+                      <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+                        <span>{event.domain ?? "unknown"}</span>
+                        {event.url ? (
+                          <button
+                            type="button"
+                            className="text-blue-600 underline-offset-4 hover:underline"
+                            title={event.url}
+                            onClick={() =>
+                              navigator.clipboard.writeText(event.url)
+                            }
+                          >
+                            Copy URL
+                          </button>
+                        ) : (
+                          <span>No URL</span>
+                        )}
+                      </div>
+                      {event.url && (
+                        <div className="mt-1 truncate text-xs text-zinc-400">
                           {event.url}
-                        </a>
-                      ) : (
-                        <p className="mt-1 text-xs text-zinc-500">No URL</p>
+                        </div>
                       )}
                     </div>
                   ))
