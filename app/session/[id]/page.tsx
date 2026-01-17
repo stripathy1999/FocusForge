@@ -11,7 +11,8 @@ type SessionResponse = {
 };
 
 async function getSessionData(id: string): Promise<SessionResponse | null> {
-  const host = headers().get("host") ?? "localhost:3000";
+  const headerList = await headers();
+  const host = headerList.get("host") ?? "localhost:3000";
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
   const response = await fetch(`${protocol}://${host}/api/session/${id}`, {
     cache: "no-store",
@@ -27,9 +28,10 @@ async function getSessionData(id: string): Promise<SessionResponse | null> {
 export default async function SessionPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const data = await getSessionData(params.id);
+  const { id } = await params;
+  const data = await getSessionData(id);
 
   if (!data) {
     return (
@@ -37,7 +39,7 @@ export default async function SessionPage({
         <div className="mx-auto w-full max-w-3xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-semibold">Session not found</h1>
           <p className="mt-3 text-sm text-zinc-600">
-            We could not find session {params.id}. Start a session from the
+            We could not find session {id}. Start a session from the
             extension and try again.
           </p>
           <Link
