@@ -91,6 +91,11 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </div>
                   ))
                 )}
+                {session.status === "ended" && (
+                  <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
+                    Session ended {formatDate(session.ended_at)}.
+                  </div>
+                )}
               </div>
             </div>
 
