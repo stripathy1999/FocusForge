@@ -35,6 +35,13 @@ function formatDuration(seconds?: number) {
   return `${minutes}m ${remainder}s`;
 }
 
+function formatEventType(type: string) {
+  if (type === "TAB_ACTIVE") {
+    return "ACTIVE TAB";
+  }
+  return type;
+}
+
 export function SessionDetail({ session, computedSummary }: SessionDetailProps) {
   const timeline = computedSummary.timeline.filter(
     (event) => event.type !== "STOP",
@@ -76,6 +83,146 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
         <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           <div className="flex flex-col gap-6">
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <h2 
+                className="text-lg font-semibold"
+                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
+              >
+                Workspaces
+              </h2>
+              {computedSummary.background && (
+                <label className="mt-3 inline-flex items-center gap-2 text-xs text-zinc-600">
+                  <input
+                    type="checkbox"
+                    checked={showBackground}
+                    onChange={(event) => setShowBackground(event.target.checked)}
+                  />
+                  Show Background/Auth (hidden by default)
+                </label>
+              )}
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                {computedSummary.domains.length === 0 ? (
+                  <p className="text-sm text-zinc-500">
+                    No workspace data yet.
+                  </p>
+                ) : (
+                  computedSummary.domains.map((domain) => (
+                    <div
+                      key={domain.domain}
+                      className={`group rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
+                        domain.topUrls.length > 0
+                          ? "cursor-pointer hover:border-[#2BB7D0] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        if (domain.topUrls.length > 0) {
+                          handleReopen(domain.topUrls);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between text-sm">
+                        <div>
+                          <span className="font-semibold font-jura">{domain.label}</span>
+                        </div>
+                        <span className="text-zinc-600">
+                          {formatDuration(domain.timeSec)}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-400">
+                        {domain.topUrls.length === 0 ? (
+                          <span>No URLs captured.</span>
+                        ) : (
+                          domain.topUrls.map((url) => (
+                            <a
+                              key={url}
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="truncate underline-offset-4 hover:underline text-zinc-400"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {url}
+                            </a>
+                          ))
+                        )}
+                      </div>
+                      {domain.topUrls.length > 0 && (
+                        <button
+                          type="button"
+                          className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReopen(domain.topUrls);
+                          }}
+                        >
+                          Click to reopen workspace
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+                {showBackground && computedSummary.background && (
+                  <div
+                    className={`group rounded-xl border border-dashed border-zinc-200 bg-white p-4 transition-all duration-200 ${
+                      computedSummary.background.topUrls.length > 0
+                        ? "cursor-pointer hover:border-[#2BB7D0] hover:bg-zinc-50 hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      if (computedSummary.background && computedSummary.background.topUrls.length > 0) {
+                        handleReopen(computedSummary.background.topUrls);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <div>
+                        <span className="font-semibold font-jura">
+                          {computedSummary.background.label}
+                        </span>
+                      </div>
+                      <span className="text-zinc-600">
+                        {formatDuration(computedSummary.background.timeSec)}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-400">
+                      {computedSummary.background.topUrls.length === 0 ? (
+                        <span>No URLs captured.</span>
+                      ) : (
+                        computedSummary.background.topUrls.map((url) => (
+                          <a
+                            key={url}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="truncate underline-offset-4 hover:underline text-zinc-400"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {url}
+                          </a>
+                        ))
+                      )}
+                    </div>
+                    {computedSummary.background.topUrls.length > 0 && (
+                      <button
+                        type="button"
+                        className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (computedSummary.background) {
+                            handleReopen(computedSummary.background.topUrls);
+                          }
+                        }}
+                      >
+                        Click to reopen workspace
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <h2 
                   className="text-lg font-semibold"
@@ -106,7 +253,11 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   keyTimeline.map((event) => (
                     <div
                       key={`${event.ts}-${event.type}`}
-                      className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
+                      className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
+                        event.url && event.type !== "BREAK"
+                          ? "hover:border-[#2BB7D0] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                          : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
+                      }`}
                     >
                       {event.type === "BREAK" ? (
                         <div className="text-xs text-zinc-500">
@@ -118,7 +269,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       ) : (
                         <>
                           <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600">
-                            <span>{event.type}</span>
+                            <span>{formatEventType(event.type)}</span>
                             <span>{formatDate(event.ts)}</span>
                             <span>
                               Duration: {formatDuration(event.durationSec)}
@@ -135,9 +286,10 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                   type="button"
                                   className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
                                   title="Copy URL"
-                                  onClick={() =>
-                                    navigator.clipboard.writeText(event.url)
-                                  }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(event.url);
+                                  }}
                                 >
                                   <svg 
                                     width="14" 
@@ -174,114 +326,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 {session.status === "auto_ended" && (
                   <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
                     Session auto-ended after inactivity.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              <h2 
-                className="text-lg font-semibold"
-                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
-              >
-                Workspaces
-              </h2>
-              {computedSummary.background && (
-                <label className="mt-3 inline-flex items-center gap-2 text-xs text-zinc-600">
-                  <input
-                    type="checkbox"
-                    checked={showBackground}
-                    onChange={(event) => setShowBackground(event.target.checked)}
-                  />
-                  Show Background/Auth (hidden by default)
-                </label>
-              )}
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                {computedSummary.domains.length === 0 ? (
-                  <p className="text-sm text-zinc-500">
-                    No workspace data yet.
-                  </p>
-                ) : (
-                  computedSummary.domains.map((domain) => (
-                    <div
-                      key={domain.domain}
-                      className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
-                    >
-                      <div className="flex items-center justify-between text-sm">
-                        <div>
-                          <span className="font-semibold font-jura">{domain.label}</span>
-                          <span className="ml-2 text-xs text-zinc-400">
-                            {domain.domain}
-                          </span>
-                        </div>
-                        <span className="text-zinc-600">
-                          {formatDuration(domain.timeSec)}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-600">
-                        {domain.topUrls.length === 0 ? (
-                          <span>No URLs captured.</span>
-                        ) : (
-                          domain.topUrls.map((url) => (
-                            <a
-                              key={url}
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="truncate underline-offset-4 hover:underline"
-                              style={{ color: '#4AB5C9' }}
-                            >
-                              {url}
-                            </a>
-                          ))
-                        )}
-                      </div>
-                      {domain.topUrls.length > 0 && (
-                        <button
-                          type="button"
-                          className="mt-3 inline-flex items-center text-xs font-medium underline-offset-4 hover:underline"
-                          style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
-                          onClick={() => handleReopen(domain.topUrls)}
-                        >
-                          Reopen workspace
-                        </button>
-                      )}
-                    </div>
-                  ))
-                )}
-                {showBackground && computedSummary.background && (
-                  <div className="rounded-xl border border-dashed border-zinc-200 bg-white p-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <div>
-                        <span className="font-semibold font-jura">
-                          {computedSummary.background.label}
-                        </span>
-                        <span className="ml-2 text-xs text-zinc-400">
-                          {computedSummary.background.domains.join(", ")}
-                        </span>
-                      </div>
-                      <span className="text-zinc-600">
-                        {formatDuration(computedSummary.background.timeSec)}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-600">
-                      {computedSummary.background.topUrls.length === 0 ? (
-                        <span>No URLs captured.</span>
-                      ) : (
-                        computedSummary.background.topUrls.map((url) => (
-                          <a
-                            key={url}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="truncate underline-offset-4 hover:underline"
-                            style={{ color: '#5BC5D9' }}
-                          >
-                            {url}
-                          </a>
-                        ))
-                      )}
-                    </div>
                   </div>
                 )}
               </div>
