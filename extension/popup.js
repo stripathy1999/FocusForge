@@ -7,6 +7,9 @@ const stopBtn = document.getElementById("stopBtn");
 const sessionIdEl = document.getElementById("sessionId");
 const baseUrlInput = document.getElementById("baseUrlInput");
 const saveBaseUrlBtn = document.getElementById("saveBaseUrlBtn");
+const resumePrompt = document.getElementById("resumePrompt");
+const startFreshBtn = document.getElementById("startFreshBtn");
+const continueLastBtn = document.getElementById("continueLastBtn");
 
 async function getState() {
   return await chrome.storage.local.get([
@@ -14,6 +17,7 @@ async function getState() {
     "status",
     "paused",
     "baseUrl",
+    "autoEndedSessionId",
   ]);
 }
 
@@ -35,9 +39,14 @@ function render(state) {
   const status = state.status || "stopped";
   const paused = Boolean(state.paused);
   const running = status === "running";
-  statusText.textContent = `Status: ${
-    running ? (paused ? "Paused" : "Running") : "Stopped"
-  }`;
+  const statusLabel = running
+    ? paused
+      ? "Paused"
+      : "Running"
+    : status === "auto_ended"
+      ? "Away"
+      : "Stopped";
+  statusText.textContent = `Status: ${statusLabel}`;
   pauseBtn.textContent = paused ? "Resume" : "Pause";
   sessionIdEl.textContent = state.sessionId || "—";
   baseUrlInput.value = state.baseUrl || DEFAULT_BASE_URL;
@@ -48,6 +57,10 @@ function render(state) {
   startBtn.style.opacity = running ? "0.6" : "1";
   pauseBtn.style.opacity = running ? "1" : "0.6";
   stopBtn.style.opacity = running ? "1" : "0.6";
+
+  if (resumePrompt) {
+    resumePrompt.style.display = state.autoEndedSessionId ? "block" : "none";
+  }
 }
 
 async function handleStart() {
@@ -57,7 +70,12 @@ async function handleStart() {
     return;
   }
   const data = await response.json();
-  await setState({ sessionId: data.sessionId, status: "running", paused: false });
+  await setState({
+    sessionId: data.sessionId,
+    status: "running",
+    paused: false,
+    autoEndedSessionId: undefined,
+  });
   render(await getState());
 }
 
@@ -114,7 +132,48 @@ async function handleStop() {
     statusText.textContent = "Status: Error stopping session";
     return;
   }
-  await setState({ status: "ended", paused: false });
+  await setState({ status: "ended", paused: false, autoEndedSessionId: undefined });
+  render(await getState());
+}
+
+async function handleStartFresh() {
+  const response = await apiPost("/api/session/start", {});
+  if (!response.ok) {
+    statusText.textContent = "Status: Error starting session";
+    return;
+  }
+  const data = await response.json();
+  await setState({
+    sessionId: data.sessionId,
+    status: "running",
+    paused: false,
+    autoEndedSessionId: undefined,
+  });
+  render(await getState());
+}
+
+async function handleContinueLast() {
+  const state = await getState();
+  const sessionId = state.autoEndedSessionId;
+  if (!sessionId) {
+    statusText.textContent = "Status: No previous session found";
+    return;
+  }
+  const response = await apiPost("/api/session/resume", {
+    sessionId,
+    url: "",
+    title: "",
+  });
+  if (!response.ok) {
+    statusText.textContent = "Status: Error resuming session";
+    return;
+  }
+  await setState({
+    sessionId,
+    status: "running",
+    paused: false,
+    autoEndedSessionId: undefined,
+  });
   render(await getState());
 }
 
@@ -128,5 +187,7 @@ startBtn.addEventListener("click", handleStart);
 pauseBtn.addEventListener("click", handlePauseToggle);
 stopBtn.addEventListener("click", handleStop);
 saveBaseUrlBtn.addEventListener("click", handleSaveBaseUrl);
+startFreshBtn?.addEventListener("click", handleStartFresh);
+continueLastBtn?.addEventListener("click", handleContinueLast);
 
 getState().then(render);

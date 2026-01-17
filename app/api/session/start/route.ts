@@ -3,13 +3,13 @@ import { NextResponse } from "next/server";
 import { createSession } from "@/lib/store";
 
 export async function POST(request: Request) {
-  let intent: string | undefined;
+  let intentRaw: string | undefined;
   try {
-    const body = (await request.json()) as { intent?: string };
-    intent = body.intent;
+    const body = (await request.json()) as { intent?: string; intent_raw?: string };
+    intentRaw = body.intent_raw ?? body.intent;
   } catch {
-    intent = undefined;
+    intentRaw = undefined;
   }
-  const session = createSession(intent);
+  const session = createSession(intentRaw);
   return NextResponse.json({ sessionId: session.id });
 }

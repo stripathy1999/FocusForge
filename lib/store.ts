@@ -32,14 +32,16 @@ function saveStore(store: StoreData): void {
   fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
 }
 
-export function createSession(intent?: string): Session {
+export function createSession(intentRaw?: string): Session {
   const store = loadStore();
   const id = randomUUID();
+  const { intentRaw: cleanedRaw, intentTags } = parseIntent(intentRaw);
   const session: Session = {
     id,
     started_at: Date.now(),
     status: "running",
-    intent: intent?.trim() ? intent.trim() : undefined,
+    intent_raw: cleanedRaw,
+    intent_tags: intentTags,
   };
 
   store.sessions[id] = session;
@@ -105,20 +107,44 @@ export function updateSessionStatus(
 
 export function updateSessionIntent(
   sessionId: string,
-  intent: string,
+  intentRaw: string,
 ): Session | undefined {
   const store = loadStore();
   const session = store.sessions[sessionId];
   if (!session) {
     return undefined;
   }
+  const { intentRaw: cleanedRaw, intentTags } = parseIntent(intentRaw);
   const updated: Session = {
     ...session,
-    intent: intent.trim() ? intent.trim() : undefined,
+    intent_raw: cleanedRaw,
+    intent_tags: intentTags,
   };
   store.sessions[sessionId] = updated;
   saveStore(store);
   return updated;
+}
+
+function parseIntent(intentRaw?: string): {
+  intentRaw?: string;
+  intentTags?: string[];
+} {
+  if (!intentRaw) {
+    return {};
+  }
+  const raw = intentRaw.trim();
+  if (!raw) {
+    return {};
+  }
+  const tags = raw
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+  return {
+    intentRaw: raw,
+    intentTags: tags,
+  };
 }
 
 export function getAnalysis(sessionId: string): AnalysisResult | undefined {

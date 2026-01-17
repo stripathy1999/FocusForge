@@ -1,4 +1,4 @@
-export type EventType = "TAB_ACTIVE" | "PAUSE" | "RESUME" | "STOP";
+export type EventType = "TAB_ACTIVE" | "PAUSE" | "RESUME" | "STOP" | "BREAK";
 
 export type Event = {
   sessionId: string;
@@ -8,14 +8,20 @@ export type Event = {
   title: string;
 };
 
-export type SessionStatus = "running" | "paused" | "ended" | "analyzed";
+export type SessionStatus =
+  | "running"
+  | "paused"
+  | "ended"
+  | "auto_ended"
+  | "analyzed";
 
 export type Session = {
   id: string;
   started_at: number;
   ended_at?: number;
   status: SessionStatus;
-  intent?: string;
+  intent_raw?: string;
+  intent_tags?: string[];
 };
 
 export type TimelineEvent = Event & {
@@ -69,13 +75,15 @@ export type ComputedSummary = {
     alignedTimeSec: number;
     offIntentTimeSec: number;
     neutralTimeSec: number;
+    breakTimeSec: number;
     focusScorePct: number;
     displayFocusPct: number | null;
     tooShort: boolean;
     intentMissing: boolean;
     topDriftSources: { domain: string; timeSec: number }[];
   };
-  intent: string | null;
+  intent_raw: string | null;
+  intent_tags: string[];
   emotionalSummary: string;
   aiSummary: boolean;
   resumeSummary: string;

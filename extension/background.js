@@ -28,7 +28,7 @@ async function sendTabActive(tab) {
   const state = await getState();
   const baseUrl = state.baseUrl || DEFAULT_BASE_URL;
 
-  await fetch(`${baseUrl}/api/event`, {
+  const response = await fetch(`${baseUrl}/api/event`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -39,6 +39,14 @@ async function sendTabActive(tab) {
       title: tab.title || "",
     }),
   });
+  if (response.status === 409) {
+    await chrome.storage.local.set({
+      status: "auto_ended",
+      paused: false,
+      autoEndedSessionId: state.sessionId,
+    });
+    return;
+  }
 
   await chrome.storage.local.set({
     lastActiveTs: Date.now(),

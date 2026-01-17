@@ -41,7 +41,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   );
   const [showBackground, setShowBackground] = useState(false);
   const [showFullTimeline, setShowFullTimeline] = useState(false);
-  const [intentInput, setIntentInput] = useState(session.intent ?? "");
+  const [intentInput, setIntentInput] = useState(session.intent_raw ?? "");
   const [isSavingIntent, setIsSavingIntent] = useState(false);
   const keyTimeline = showFullTimeline
     ? timeline
@@ -63,7 +63,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: session.id,
-          intent: intentInput.trim(),
+          intent_raw: intentInput.trim(),
         }),
       });
       window.location.reload();
@@ -118,35 +118,48 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       key={`${event.ts}-${event.type}`}
                       className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600">
-                        <span>{event.type}</span>
-                        <span>{formatDate(event.ts)}</span>
-                        <span>Duration: {formatDuration(event.durationSec)}</span>
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-zinc-900">
-                        {event.title || "Untitled tab"}
-                      </div>
-                      <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
-                        <span>{event.domain ?? "unknown"}</span>
-                        {event.url ? (
-                          <button
-                            type="button"
-                            className="text-blue-600 underline-offset-4 hover:underline"
-                            title={event.url}
-                            onClick={() =>
-                              navigator.clipboard.writeText(event.url)
-                            }
-                          >
-                            Copy URL
-                          </button>
-                        ) : (
-                          <span>No URL</span>
-                        )}
-                      </div>
-                      {event.url && (
-                        <div className="mt-1 truncate text-xs text-zinc-400">
-                          {event.url}
+                      {event.type === "BREAK" ? (
+                        <div className="text-xs text-zinc-500">
+                          <div className="font-medium text-zinc-700">
+                            Break detected ({formatDuration(event.durationSec)}) —
+                            not counted
+                          </div>
                         </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600">
+                            <span>{event.type}</span>
+                            <span>{formatDate(event.ts)}</span>
+                            <span>
+                              Duration: {formatDuration(event.durationSec)}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-sm font-medium text-zinc-900">
+                            {event.title || "Untitled tab"}
+                          </div>
+                          <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+                            <span>{event.domain ?? "unknown"}</span>
+                            {event.url ? (
+                              <button
+                                type="button"
+                                className="text-blue-600 underline-offset-4 hover:underline"
+                                title={event.url}
+                                onClick={() =>
+                                  navigator.clipboard.writeText(event.url)
+                                }
+                              >
+                                Copy URL
+                              </button>
+                            ) : (
+                              <span>No URL</span>
+                            )}
+                          </div>
+                          {event.url && (
+                            <div className="mt-1 truncate text-xs text-zinc-400">
+                              {event.url}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   ))
@@ -154,6 +167,11 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 {session.status === "ended" && (
                   <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
                     Session ended {formatDate(session.ended_at)}.
+                  </div>
+                )}
+                {session.status === "auto_ended" && (
+                  <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
+                    Session auto-ended after inactivity.
                   </div>
                 )}
               </div>
@@ -273,20 +291,41 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               )}
             </div>
             <div className="mt-4 space-y-6 text-sm text-zinc-700">
+                {session.status === "auto_ended" && (
+                  <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+                    This session auto-ended after a long period of inactivity.
+                  </div>
+                )}
                 <div>
                   <p className="text-xs uppercase tracking-wide text-zinc-500">
                     Session Intent
                   </p>
-                  {computedSummary.intent ? (
-                    <p className="mt-2 text-sm text-zinc-800">
-                      {computedSummary.intent}
-                    </p>
+                  {computedSummary.intent_tags.length > 0 ? (
+                    <>
+                      <p className="mt-2 text-sm text-zinc-800">
+                        {computedSummary.intent_raw}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {computedSummary.intent_tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full bg-zinc-100 px-2 py-1 text-[11px] text-zinc-700"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-xs text-zinc-500">
+                        You were working across:{" "}
+                        {computedSummary.intent_tags.join(", ")}.
+                      </p>
+                    </>
                   ) : (
                     <div className="mt-2 flex flex-col gap-2">
                       <input
                         value={intentInput}
                         onChange={(event) => setIntentInput(event.target.value)}
-                        placeholder="What are you focusing on right now?"
+                        placeholder="What are you focusing on? (comma-separated)"
                         className="rounded-md border border-zinc-200 px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none"
                       />
                       <button
@@ -399,6 +438,18 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   Time Breakdown
                 </p>
                 <div className="mt-2 space-y-1 text-xs text-zinc-600">
+                  <div className="flex items-center justify-between">
+                    <span>Active time</span>
+                    <span>{formatDuration(computedSummary.focus.totalTimeSec)}</span>
+                  </div>
+                  {computedSummary.focus.breakTimeSec > 0 && (
+                    <div className="flex items-center justify-between text-zinc-500">
+                      <span>Break time (not counted)</span>
+                      <span>
+                        {formatDuration(computedSummary.focus.breakTimeSec)}
+                      </span>
+                    </div>
+                  )}
                   {computedSummary.timeBreakdown.length === 0 ? (
                     <p>No time data yet.</p>
                   ) : (
@@ -440,6 +491,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     Neutral{" "}
                     {formatDuration(computedSummary.focus.neutralTimeSec)}
                   </div>
+                  {computedSummary.focus.breakTimeSec > 0 && (
+                    <div className="mt-1 text-[11px] text-zinc-500">
+                      Breaks {formatDuration(computedSummary.focus.breakTimeSec)}{" "}
+                      — not counted
+                    </div>
+                  )}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {computedSummary.focus.topDriftSources.length === 0 ? (
                       <span className="text-zinc-500">No off-intent tabs.</span>

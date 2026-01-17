@@ -57,7 +57,14 @@ export function computeSummary(
       ]
     : ["(placeholder) Capture next actions after analysis."];
   const timeBreakdown = buildTimeBreakdown(domains, background?.timeSec ?? 0);
-  const focus = buildFocusSummary(domains, session.intent);
+  const breakTimeSec = timeline
+    .filter((event) => event.type === "BREAK")
+    .reduce((sum, event) => sum + (event.durationSec ?? 0), 0);
+  const focus = buildFocusSummary(
+    domains,
+    session.intent_tags ?? [],
+    breakTimeSec,
+  );
   const resumeUrls = buildResumeUrls(lastStop, domains);
   const lastStopDomain = lastStop?.domain ?? safeDomain(lastStop?.url ?? "");
   const lastStopWorkspace = domains.find((domain) => domain.domain === lastStopDomain);
@@ -78,7 +85,8 @@ export function computeSummary(
       : undefined,
     resumeUrls,
     focus,
-    intent: session.intent ?? null,
+    intent_raw: session.intent_raw ?? null,
+    intent_tags: session.intent_tags ?? [],
     emotionalSummary: buildEmotionalSummary(domains),
     aiSummary: analysis?.source === "gemini",
     resumeSummary: analysis?.resumeSummary ?? fallbackResumeSummary,
@@ -95,13 +103,15 @@ function addDurations(session: Session, events: Event[]): TimelineEvent[] {
     const event = events[index];
     const entry: TimelineEvent = { ...event };
 
-    if (event.type === "TAB_ACTIVE") {
+    if (event.type === "TAB_ACTIVE" || event.type === "BREAK") {
       const nextEvent = events[index + 1];
       const durationMs = nextEvent
         ? nextEvent.ts - event.ts
         : resolveTailDuration(session, event.ts);
       entry.durationSec = Math.max(0, Math.round(durationMs / 1000));
-      entry.domain = safeDomain(event.url);
+      if (event.type === "TAB_ACTIVE") {
+        entry.domain = safeDomain(event.url);
+      }
     }
 
     timeline.push(entry);
@@ -303,17 +313,21 @@ function getTopPages(timeline: TimelineEvent[], limit: number): TopPage[] {
   return pages;
 }
 
-function buildFocusSummary(domains: DomainSummary[], intent?: string) {
+function buildFocusSummary(
+  domains: DomainSummary[],
+  intentTags: string[],
+  breakTimeSec: number,
+) {
   const totalTimeSec = domains.reduce((sum, domain) => sum + domain.timeSec, 0);
-  const intentMissing = !intent || !intent.trim();
+  const intentMissing = intentTags.length === 0;
   const alignedTimeSec = domains
-    .filter((domain) => alignmentForDomain(intent, domain) === "aligned")
+    .filter((domain) => alignmentForDomain(intentTags, domain) === "aligned")
     .reduce((sum, domain) => sum + domain.timeSec, 0);
   const neutralTimeSec = domains
-    .filter((domain) => alignmentForDomain(intent, domain) === "neutral")
+    .filter((domain) => alignmentForDomain(intentTags, domain) === "neutral")
     .reduce((sum, domain) => sum + domain.timeSec, 0);
   const offIntentTimeSec = domains
-    .filter((domain) => alignmentForDomain(intent, domain) === "off-intent")
+    .filter((domain) => alignmentForDomain(intentTags, domain) === "off-intent")
     .reduce((sum, domain) => sum + domain.timeSec, 0);
   const focusScorePct =
     totalTimeSec > 0 ? Math.round((alignedTimeSec / totalTimeSec) * 100) : 0;
@@ -322,7 +336,7 @@ function buildFocusSummary(domains: DomainSummary[], intent?: string) {
     ? null
     : Math.max(25, Math.min(focusScorePct, 95));
   const topDriftSources = domains
-    .filter((domain) => alignmentForDomain(intent, domain) === "off-intent")
+    .filter((domain) => alignmentForDomain(intentTags, domain) === "off-intent")
     .sort((a, b) => b.timeSec - a.timeSec)
     .slice(0, 3)
     .map((domain) => ({ domain: domain.domain, timeSec: domain.timeSec }));
@@ -332,6 +346,7 @@ function buildFocusSummary(domains: DomainSummary[], intent?: string) {
     alignedTimeSec,
     offIntentTimeSec,
     neutralTimeSec,
+    breakTimeSec,
     focusScorePct,
     displayFocusPct,
     tooShort,
@@ -341,14 +356,14 @@ function buildFocusSummary(domains: DomainSummary[], intent?: string) {
 }
 
 function alignmentForDomain(
-  intent: string | undefined,
+  intentTags: string[],
   domain: DomainSummary,
 ): "aligned" | "neutral" | "off-intent" {
-  if (!intent || !intent.trim()) {
+  if (intentTags.length === 0) {
     return "neutral";
   }
 
-  const normalized = intent.toLowerCase();
+  const normalized = intentTags.join(" ").toLowerCase();
   const mode = inferIntentMode(normalized);
 
   if (mode === "relax") {
