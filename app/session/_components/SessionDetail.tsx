@@ -124,7 +124,7 @@ function TimeBreakdownPie({
                 onMouseEnter={() => setHovered({ label: seg.label, pct })}
                 onMouseLeave={() => setHovered(null)}
               >
-                <title>{seg.label}: {pct}%</title>
+                <title>{`${seg.label}: ${pct}%`}</title>
               </path>
             );
           })}
