@@ -273,7 +273,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     >
                       <div className="flex items-center justify-between text-sm">
                         <div>
-                          <span className="font-semibold" style={{ fontFamily: 'var(--font-lato), sans-serif', color: '#32578E' }}>{domain.label}</span>
+                          <span className="font-semibold" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E', fontWeight: 700 }}>{domain.label}</span>
                         </div>
                         <span className="text-zinc-600">
                           {formatDuration(domain.timeSec)}
@@ -358,7 +358,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       ) : (
                         <>
                           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                            <span className="font-semibold" style={{ fontFamily: 'var(--font-lato), sans-serif', color: '#32578E' }}>
+                            <span className="font-semibold" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E', fontWeight: 700 }}>
                               {event.title || "Untitled tab"}
                             </span>
                             <span className="text-sm text-zinc-600">{formatDate(event.ts)}</span>

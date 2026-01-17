@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { headers } from "next/headers";
 
 type SessionListItem = {
@@ -62,7 +63,13 @@ export default async function Home() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <header className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="h-[90px] w-[90px] rounded-full" style={{ backgroundColor: '#32578E' }}></div>
+            <Image 
+              src="/focus_forge_logo.png" 
+              alt="FocusForge" 
+              width={90} 
+              height={90}
+              className="h-[90px] w-[90px]"
+            />
             <h1 
               className="text-[90px] font-semibold leading-none"
               style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
