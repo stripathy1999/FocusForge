@@ -5,6 +5,7 @@ const startBtn = document.getElementById("startBtn");
 const pauseBtn = document.getElementById("pauseBtn");
 const stopBtn = document.getElementById("stopBtn");
 const sessionIdEl = document.getElementById("sessionId");
+const timerEl = document.getElementById("timerEl");
 const baseUrlInput = document.getElementById("baseUrlInput");
 const saveBaseUrlBtn = document.getElementById("saveBaseUrlBtn");
 const intentInput = document.getElementById("intentInput");
@@ -12,6 +13,8 @@ const saveIntentBtn = document.getElementById("saveIntentBtn");
 const resumePrompt = document.getElementById("resumePrompt");
 const startFreshBtn = document.getElementById("startFreshBtn");
 const continueLastBtn = document.getElementById("continueLastBtn");
+
+let timerInterval = null;
 
 async function getState() {
   return await chrome.storage.local.get([
@@ -21,6 +24,9 @@ async function getState() {
     "baseUrl",
     "autoEndedSessionId",
     "intent",
+    "startedAt",
+    "pausedAt",
+    "totalPausedMs",
   ]);
 }
 
@@ -38,18 +44,43 @@ async function apiPost(path, body) {
   });
 }
 
+function formatElapsed(ms) {
+  if (ms < 0) return "0:00";
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}:${String(m % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function getElapsedMs(state) {
+  if (!state.startedAt || state.startedAt === 0) return null;
+  if (state.status !== "running" && state.status !== "paused") return null;
+  const total = state.totalPausedMs || 0;
+  if (state.paused && state.pausedAt) return state.pausedAt - state.startedAt - total;
+  return Date.now() - state.startedAt - total;
+}
+
 function render(state) {
   const status = state.status || "stopped";
   const paused = Boolean(state.paused);
   const running = status === "running";
-  const statusLabel = running
-    ? paused
-      ? "Paused"
-      : "Running"
-    : status === "auto_ended"
-      ? "Away"
-      : "Stopped";
-  statusText.textContent = `Status: ${statusLabel}`;
+  const statusLabel = status === "paused"
+    ? "Paused"
+    : running
+      ? "Running"
+      : status === "auto_ended"
+        ? "Away"
+        : "Stopped";
+  const statusClass = status === "paused"
+    ? "paused"
+    : running
+      ? "running"
+      : status === "auto_ended"
+        ? "away"
+        : "stopped";
+  statusText.textContent = statusLabel;
+  statusText.className = "status-badge " + statusClass;
   pauseBtn.textContent = paused ? "Resume" : "Pause";
   sessionIdEl.textContent = state.sessionId || "—";
   baseUrlInput.value = state.baseUrl || DEFAULT_BASE_URL;
@@ -58,22 +89,46 @@ function render(state) {
   }
 
   const hasIntent = Boolean((intentInput?.value || state.intent || "").trim());
-  startBtn.disabled = running || !hasIntent;
-  pauseBtn.disabled = !running;
-  stopBtn.disabled = !running;
-  startBtn.style.opacity = startBtn.disabled ? "0.6" : "1";
-  pauseBtn.style.opacity = running ? "1" : "0.6";
-  stopBtn.style.opacity = running ? "1" : "0.6";
+  const sessionActive = status === "running" || status === "paused";
+  startBtn.disabled = sessionActive || !hasIntent;
+  pauseBtn.disabled = !sessionActive;
+  stopBtn.disabled = !sessionActive;
 
   if (resumePrompt) {
     resumePrompt.style.display = state.autoEndedSessionId ? "block" : "none";
+  }
+
+  if (timerEl) {
+    const showTimer = (state.status === "running" || state.status === "paused") && state.startedAt && state.startedAt > 0;
+    if (showTimer) {
+      const ms = getElapsedMs(state);
+      timerEl.textContent = ms != null ? formatElapsed(ms) : "—";
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        getState().then((s) => {
+          if (s.status === "running" || s.status === "paused") {
+            const m = getElapsedMs(s);
+            timerEl.textContent = m != null ? formatElapsed(m) : "—";
+          } else {
+            timerEl.textContent = "—";
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+        });
+      }, 1000);
+    } else {
+      timerEl.textContent = "—";
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
   }
 }
 
 async function handleStart() {
   const intent = intentInput?.value?.trim() || "";
   if (!intent) {
-    statusText.textContent = "Status: Add an intent to start";
+    statusText.textContent = "Add an intent to start";
+    statusText.className = "status status--error";
     return;
   }
   const response = await apiPost("/api/session/start", {
@@ -81,7 +136,8 @@ async function handleStart() {
   });
   if (!response.ok) {
     const message = await response.text();
-    statusText.textContent = `Status: Error starting session (${response.status})`;
+    statusText.textContent = "Error starting session (" + response.status + ")";
+    statusText.className = "status status--error";
     console.error("Start session failed", message);
     return;
   }
@@ -92,6 +148,9 @@ async function handleStart() {
     paused: false,
     autoEndedSessionId: undefined,
     intent,
+    startedAt: Date.now(),
+    totalPausedMs: 0,
+    pausedAt: null,
   });
   render(await getState());
 }
@@ -99,11 +158,13 @@ async function handleStart() {
 async function handlePauseToggle() {
   const state = await getState();
   if (!state.sessionId) {
-    statusText.textContent = "Status: Start a session first";
+    statusText.textContent = "Start a session first";
+    statusText.className = "status status--error";
     return;
   }
-  if (state.status !== "running") {
-    statusText.textContent = "Status: Session is not running";
+  if (state.status !== "running" && state.status !== "paused") {
+    statusText.textContent = "Session is not running";
+    statusText.className = "status status--error";
     return;
   }
 
@@ -114,10 +175,12 @@ async function handlePauseToggle() {
       title: "",
     });
     if (!response.ok) {
-      statusText.textContent = "Status: Error resuming";
+      statusText.textContent = "Error resuming";
+      statusText.className = "status status--error";
       return;
     }
-    await setState({ paused: false, status: "running" });
+    const totalPausedMs = (state.totalPausedMs || 0) + (Date.now() - (state.pausedAt || 0));
+    await setState({ paused: false, status: "running", totalPausedMs, pausedAt: null });
   } else {
     const response = await apiPost("/api/session/pause", {
       sessionId: state.sessionId,
@@ -125,10 +188,11 @@ async function handlePauseToggle() {
       title: "",
     });
     if (!response.ok) {
-      statusText.textContent = "Status: Error pausing";
+      statusText.textContent = "Error pausing";
+      statusText.className = "status status--error";
       return;
     }
-    await setState({ paused: true, status: "paused" });
+    await setState({ paused: true, status: "paused", pausedAt: Date.now() });
   }
   render(await getState());
 }
@@ -136,7 +200,8 @@ async function handlePauseToggle() {
 async function handleStop() {
   const state = await getState();
   if (!state.sessionId) {
-    statusText.textContent = "Status: Start a session first";
+    statusText.textContent = "Start a session first";
+    statusText.className = "status status--error";
     return;
   }
 
@@ -146,22 +211,25 @@ async function handleStop() {
     title: "",
   });
   if (!response.ok) {
-    statusText.textContent = "Status: Error stopping session";
+    statusText.textContent = "Error stopping session";
+    statusText.className = "status status--error";
     return;
   }
-  await setState({ status: "ended", paused: false, autoEndedSessionId: undefined });
+  await setState({ status: "ended", paused: false, autoEndedSessionId: undefined, startedAt: 0, pausedAt: null, totalPausedMs: 0 });
   render(await getState());
 }
 
 async function handleStartFresh() {
   const intent = intentInput?.value?.trim() || "";
   if (!intent) {
-    statusText.textContent = "Status: Add an intent to start";
+    statusText.textContent = "Add an intent to start";
+    statusText.className = "status status--error";
     return;
   }
   const response = await apiPost("/api/session/start", { intent });
   if (!response.ok) {
-    statusText.textContent = "Status: Error starting session";
+    statusText.textContent = "Error starting session";
+    statusText.className = "status status--error";
     return;
   }
   const data = await response.json();
@@ -179,7 +247,8 @@ async function handleContinueLast() {
   const state = await getState();
   const sessionId = state.autoEndedSessionId;
   if (!sessionId) {
-    statusText.textContent = "Status: No previous session found";
+    statusText.textContent = "No previous session found";
+    statusText.className = "status status--error";
     return;
   }
   const response = await apiPost("/api/session/resume", {
@@ -188,7 +257,8 @@ async function handleContinueLast() {
     title: "",
   });
   if (!response.ok) {
-    statusText.textContent = "Status: Error resuming session";
+    statusText.textContent = "Error resuming session";
+    statusText.className = "status status--error";
     return;
   }
   await setState({
@@ -196,6 +266,9 @@ async function handleContinueLast() {
     status: "running",
     paused: false,
     autoEndedSessionId: undefined,
+    startedAt: Date.now(),
+    totalPausedMs: 0,
+    pausedAt: null,
   });
   render(await getState());
 }
@@ -221,7 +294,8 @@ async function handleSaveIntent() {
     intent,
   });
   if (!response.ok) {
-    statusText.textContent = "Status: Error saving intent";
+    statusText.textContent = "Error saving intent";
+    statusText.className = "status status--error";
     return;
   }
   render(await getState());
