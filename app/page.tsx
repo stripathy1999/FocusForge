@@ -116,7 +116,7 @@ export default async function Home() {
                   className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <div className="font-medium text-zinc-900">
+                    <div className="font-medium font-jura text-zinc-900">
                       {session.id}
                     </div>
                     <div className="mt-1 text-xs text-zinc-500">

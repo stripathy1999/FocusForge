@@ -110,7 +110,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     >
                       {event.type === "BREAK" ? (
                         <div className="text-xs text-zinc-500">
-                          <div className="font-medium text-zinc-700">
+                          <div className="font-medium font-jura text-zinc-700">
                             Break detected ({formatDuration(event.durationSec)}) —
                             not counted
                           </div>
@@ -124,7 +124,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                               Duration: {formatDuration(event.durationSec)}
                             </span>
                           </div>
-                          <div className="mt-2 text-sm font-medium text-zinc-900">
+                          <div className="mt-2 text-sm font-medium font-jura text-zinc-900">
                             {event.title || "Untitled tab"}
                           </div>
                           <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
@@ -198,7 +198,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     >
                       <div className="flex items-center justify-between text-sm">
                         <div>
-                          <span className="font-semibold">{domain.label}</span>
+                          <span className="font-semibold font-jura">{domain.label}</span>
                           <span className="ml-2 text-xs text-zinc-400">
                             {domain.domain}
                           </span>
@@ -241,7 +241,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   <div className="rounded-xl border border-dashed border-zinc-200 bg-white p-4">
                     <div className="flex items-center justify-between text-sm">
                       <div>
-                        <span className="font-semibold">
+                        <span className="font-semibold font-jura">
                           {computedSummary.background.label}
                         </span>
                         <span className="ml-2 text-xs text-zinc-400">
@@ -285,7 +285,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               </h2>
               {computedSummary.aiSummary && (
                 <span
-                  className="rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-purple-700"
+                  className="rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold font-jura uppercase tracking-wide text-purple-700"
                   title="Generated using Gemini based on session activity (URLs + timing only). No content captured."
                 >
                   ✨ AI-generated summary
@@ -372,8 +372,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     Resume:{" "}
                     <button
                       type="button"
+<<<<<<< HEAD
                       className="text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
                       style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+=======
+                      className="font-jura text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
+>>>>>>> 88e76b432e2a2435f3107d6793f9047088e1d400
                       onClick={() =>
                         computedSummary.lastStop?.url
                           ? handleReopen([computedSummary.lastStop.url])
@@ -401,7 +405,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </button>
                   </div>
                   <div className="rounded-md border border-zinc-200 px-3 py-2 text-zinc-700">
-                    <div className="text-xs font-medium">
+                    <div className="text-xs font-medium font-jura">
                       Review top 3 pages visited
                     </div>
                     <div className="mt-2 space-y-1 text-xs text-zinc-600">
@@ -463,15 +467,15 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </p>
                 <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs text-zinc-600">
                   {computedSummary.focus.intentMissing ? (
-                    <div className="text-sm font-semibold text-zinc-900">
+                    <div className="text-sm font-semibold font-jura text-zinc-900">
                       Time split across different activities
                     </div>
                   ) : computedSummary.focus.tooShort ? (
-                    <div className="text-sm font-semibold text-zinc-900">
+                    <div className="text-sm font-semibold font-jura text-zinc-900">
                       Session too short to assess focus
                     </div>
                   ) : (
-                    <div className="text-2xl font-semibold text-zinc-900">
+                    <div className="text-2xl font-semibold font-jura text-zinc-900">
                       {computedSummary.focus.displayFocusPct}% Aligned
                     </div>
                   )}
