@@ -47,8 +47,8 @@ const PIE_COLORS = [
   "#1a9ba8", // darker teal
   "#2BB7D0", // primary
   "#38c2d4",
-  "#4AB5C9", // secondary
-  "#5BC5D9", // light accent
+  "#5BC5D9", // secondary
+  "#4AB5C9", // light accent
   "#6ed5e4",
   "#22a3be",
   "#7ee0ed", // lightest
@@ -275,7 +275,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         <button
                           type="button"
                           className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+                          style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleReopen(domain.topUrls);
@@ -332,7 +332,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       <button
                         type="button"
                         className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (computedSummary.background) {
@@ -359,7 +359,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <button
                   type="button"
                   className="text-xs underline-offset-4 hover:underline"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
                   onClick={() => setShowFullTimeline((value) => !value)}
                 >
                   {showFullTimeline ? "Show key moments" : "View full timeline"}
@@ -423,7 +423,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                     viewBox="0 0 16 16" 
                                     fill="none" 
                                     xmlns="http://www.w3.org/2000/svg"
-                                    style={{ color: '#4AB5C9' }}
+                                    style={{ color: '#5BC5D9' }}
                                   >
                                     <path 
                                       d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z" 
@@ -524,7 +524,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <button
                   type="button"
                   className="text-left text-sm underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
                   onClick={() =>
                     computedSummary.lastStop?.url
                       ? handleReopen([computedSummary.lastStop.url])
@@ -554,7 +554,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <button
                       type="button"
                       className="underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
                       onClick={() =>
                         computedSummary.lastStop?.url
                           ? handleReopen([computedSummary.lastStop.url])
@@ -570,7 +570,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <button
                       type="button"
                       className="underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
                       onClick={() =>
                         computedSummary.domains[0]?.topUrls?.length
                           ? handleReopen(computedSummary.domains[0].topUrls)
@@ -594,7 +594,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                             key={page.url}
                             type="button"
                             className="block w-full truncate text-left underline-offset-4 hover:underline"
-                            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
+                            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
                             title={page.url}
                             onClick={() => handleReopen([page.url])}
                           >
@@ -779,7 +779,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 )}
               </div>
               <div className="pt-4 text-sm text-zinc-500">
-                <Link href="/session/demo" className="underline" style={{ color: '#4AB5C9' }}>
+                <Link href="/session/demo" className="underline" style={{ color: '#5BC5D9' }}>
                   View demo session →
                 </Link>
               </div>

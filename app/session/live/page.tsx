@@ -26,7 +26,7 @@ export default function LiveSessionPage() {
         <div className="mt-8 rounded-lg bg-zinc-50 p-4 text-sm text-zinc-600">
           <p>
             Want to test without the extension? Try the{" "}
-            <Link href="/session/demo" className="underline" style={{ color: '#4AB5C9' }}>
+            <Link href="/session/demo" className="underline" style={{ color: '#5BC5D9' }}>
               demo session
             </Link>
             .

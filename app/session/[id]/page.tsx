@@ -45,7 +45,7 @@ export default async function SessionPage({
           <Link
             href="/session/live"
             className="mt-4 inline-block underline"
-            style={{ color: '#4AB5C9' }}
+            style={{ color: '#5BC5D9' }}
           >
             Go to Live Session
           </Link>

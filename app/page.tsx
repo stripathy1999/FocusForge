@@ -72,7 +72,7 @@ export default async function Home() {
           </div>
           <h2 
             className="mt-4 text-3xl font-semibold"
-            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
+            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
           >
             Auto-track browser sessions and resume faster.
           </h2>
@@ -113,7 +113,7 @@ export default async function Home() {
               sessions.slice(0, 5).map((session) => (
                 <div
                   key={session.id}
-                  className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 transition-all duration-200 hover:border-[#2BB7D0] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <div className="font-medium font-jura text-zinc-900">
@@ -134,7 +134,7 @@ export default async function Home() {
                   <Link
                     href={`/session/${session.id}`}
                     className="underline"
-                    style={{ color: '#4AB5C9' }}
+                    style={{ color: '#5BC5D9' }}
                   >
                     Open
                   </Link>

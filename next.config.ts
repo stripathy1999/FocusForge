@@ -11,8 +11,8 @@ import type { NextConfig } from "next";
  * 
  * Colors:
  * - Primary: #2BB7D0 (headers, main CTAs, primary elements)
- * - Secondary: #4AB5C9 (subtitles, secondary actions)
- * - Light Accent: #5BC5D9 (lighter subtitle variants)
+ * - Secondary: #5BC5D9 (subtitles, secondary actions)
+ * - Light Accent: #4AB5C9 (lighter subtitle variants)
  * - Muted: #8f8f9f (body text, descriptions)
  * - Primary Dark: #22a3be (darker variant)
  * - Primary Light: #7ee0ed (lighter variant)
@@ -21,8 +21,8 @@ import type { NextConfig } from "next";
 export const theme = {
   colors: {
     primary: "#2BB7D0",
-    secondary: "#4AB5C9",
-    lightAccent: "#5BC5D9",
+    secondary: "#5BC5D9",
+    lightAccent: "#4AB5C9",
     muted: "#8f8f9f",
     primaryDark: "#22a3be",
     primaryLight: "#7ee0ed",
