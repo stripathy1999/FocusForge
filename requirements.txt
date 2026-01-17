@@ -1,0 +1,4 @@
+# FocusForge dependencies
+
+# For Gemini API (optional, for intelligent analysis)
+google-generativeai>=0.3.0
