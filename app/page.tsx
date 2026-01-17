@@ -62,21 +62,21 @@ export default async function Home() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <header className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="h-[90px] w-[90px] rounded-full bg-white border border-zinc-900"></div>
+            <div className="h-[90px] w-[90px] rounded-full" style={{ backgroundColor: '#2BB7D0' }}></div>
             <h1 
               className="text-[90px] font-semibold leading-none"
-              style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
             >
               FocusForge
             </h1>
           </div>
           <h2 
             className="mt-4 text-3xl font-semibold"
-            style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#5BC5D9' }}
           >
             Auto-track browser sessions and resume faster.
           </h2>
-          <p className="mt-4 max-w-2xl text-sm text-zinc-600">
+          <p className="mt-4 max-w-2xl text-sm" style={{ color: '#8f8f9f' }}>
             FocusForge only captures the active tab&apos;s URL, title, and
             timestamps. No page content, no keystrokes, and no personal data
             beyond what your browser already exposes.
@@ -84,15 +84,15 @@ export default async function Home() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href="/session/live"
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800"
-              style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm"
+              style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#2BB7D0', borderColor: '#2BB7D0' }}
             >
               Open Session
             </Link>
             <Link
               href="/session/demo"
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-              style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-zinc-100"
+              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0', borderColor: '#2BB7D0' }}
             >
               View Demo
             </Link>
@@ -102,7 +102,7 @@ export default async function Home() {
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 
             className="text-lg font-semibold"
-            style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
           >
             Recent Sessions
           </h2>

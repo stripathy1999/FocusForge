@@ -79,7 +79,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               <div className="flex items-center justify-between">
                 <h2 
                   className="text-lg font-semibold"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
                 >
                   Timeline
                 </h2>
@@ -171,7 +171,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <h2 
                 className="text-lg font-semibold"
-                style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
               >
                 Workspaces
               </h2>
@@ -279,7 +279,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             <div className="flex items-center justify-between">
               <h2 
                 className="text-lg font-semibold"
-                style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
               >
                 Resume Panel
               </h2>
@@ -329,8 +329,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
-                  className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-60"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
+                  style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#2BB7D0', borderColor: '#2BB7D0' }}
                   onClick={() =>
                     computedSummary.resumeUrls.length
                       ? handleReopen(computedSummary.resumeUrls)
@@ -372,12 +372,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     Resume:{" "}
                     <button
                       type="button"
-<<<<<<< HEAD
                       className="text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
                       style={{ fontFamily: 'var(--font-jura), sans-serif' }}
-=======
-                      className="font-jura text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
->>>>>>> 88e76b432e2a2435f3107d6793f9047088e1d400
                       onClick={() =>
                         computedSummary.lastStop?.url
                           ? handleReopen([computedSummary.lastStop.url])
