@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { runGeminiAnalysis } from "@/lib/analysis";
 import { addEvent, updateSessionStatus } from "@/lib/store";
 
 export async function POST(request: Request) {
@@ -26,6 +27,12 @@ export async function POST(request: Request) {
     url: body.url ?? "",
     title: body.title ?? "",
   });
+
+  try {
+    await runGeminiAnalysis(body.sessionId);
+  } catch {
+    // Ignore analysis failures; deterministic summary is the fallback.
+  }
 
   return NextResponse.json({ ok: true });
 }

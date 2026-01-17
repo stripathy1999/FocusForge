@@ -38,6 +38,11 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
     (event) => event.type !== "STOP",
   );
 
+  const handleReopen = (urls: string[]) => {
+    window.postMessage({ type: "FOCUSFORGE_REOPEN", urls }, "*");
+    urls.forEach((url) => window.open(url, "_blank", "noopener,noreferrer"));
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-900">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
@@ -125,7 +130,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
                     >
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-semibold">{domain.label}</span>
+                        <div>
+                          <span className="font-semibold">{domain.label}</span>
+                          <span className="ml-2 text-xs text-zinc-400">
+                            {domain.domain}
+                          </span>
+                        </div>
                         <span className="text-zinc-600">
                           {formatDuration(domain.timeSec)}
                         </span>
@@ -147,6 +157,15 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           ))
                         )}
                       </div>
+                      {domain.topUrls.length > 0 && (
+                        <button
+                          type="button"
+                          className="mt-3 inline-flex items-center text-xs font-medium text-blue-600 underline-offset-4 hover:underline"
+                          onClick={() => handleReopen(domain.topUrls)}
+                        >
+                          Reopen workspace
+                        </button>
+                      )}
                     </div>
                   ))
                 )}
@@ -172,6 +191,26 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-zinc-500">
+                  Time Breakdown
+                </p>
+                <div className="mt-2 space-y-1 text-xs text-zinc-600">
+                  {computedSummary.timeBreakdown.length === 0 ? (
+                    <p>No time data yet.</p>
+                  ) : (
+                    computedSummary.timeBreakdown.map((item) => (
+                      <div
+                        key={item.label}
+                        className="flex items-center justify-between"
+                      >
+                        <span>{item.label}</span>
+                        <span>{formatDuration(item.timeSec)}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wide text-zinc-500">

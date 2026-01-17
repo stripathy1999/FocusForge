@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { computeSummary } from "@/lib/grouping";
-import { getEvents, getSession } from "@/lib/store";
+import { getAnalysis, getEvents, getSession } from "@/lib/store";
 
 export async function GET(
   _request: Request,
@@ -15,7 +15,8 @@ export async function GET(
   }
 
   const events = getEvents(id);
-  const computedSummary = computeSummary(session, events);
+  const analysis = getAnalysis(id);
+  const computedSummary = computeSummary(session, events, analysis);
 
   return NextResponse.json({ session, events, computedSummary });
 }

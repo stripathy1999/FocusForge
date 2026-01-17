@@ -13,5 +13,14 @@
   },
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "https://YOUR_DEPLOYED_DOMAIN/*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
 }

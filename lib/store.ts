@@ -2,11 +2,12 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 
-import { Event, Session, SessionStatus } from "@/lib/types";
+import { AnalysisResult, Event, Session, SessionStatus } from "@/lib/types";
 
 type StoreData = {
   sessions: Record<string, Session>;
   eventsBySession: Record<string, Event[]>;
+  analysisBySession?: Record<string, AnalysisResult>;
 };
 
 const STORE_DIR = path.join(process.cwd(), ".data");
@@ -19,9 +20,10 @@ function loadStore(): StoreData {
     return {
       sessions: parsed.sessions ?? {},
       eventsBySession: parsed.eventsBySession ?? {},
+      analysisBySession: parsed.analysisBySession ?? {},
     };
   } catch {
-    return { sessions: {}, eventsBySession: {} };
+    return { sessions: {}, eventsBySession: {}, analysisBySession: {} };
   }
 }
 
@@ -98,4 +100,19 @@ export function updateSessionStatus(
   store.sessions[sessionId] = updated;
   saveStore(store);
   return updated;
+}
+
+export function getAnalysis(sessionId: string): AnalysisResult | undefined {
+  const store = loadStore();
+  return store.analysisBySession?.[sessionId];
+}
+
+export function setAnalysis(
+  sessionId: string,
+  analysis: AnalysisResult,
+): void {
+  const store = loadStore();
+  store.analysisBySession = store.analysisBySession ?? {};
+  store.analysisBySession[sessionId] = analysis;
+  saveStore(store);
 }

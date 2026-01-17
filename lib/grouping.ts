@@ -1,9 +1,11 @@
 import {
   ComputedSummary,
+  AnalysisResult,
   DomainSummary,
   Event,
   Session,
   TimelineEvent,
+  TimeBreakdownItem,
 } from "@/lib/types";
 
 const DEFAULT_RESUME_SUMMARY =
@@ -11,53 +13,71 @@ const DEFAULT_RESUME_SUMMARY =
 
 const DOMAIN_LABELS: Record<string, string> = {
   "leetcode.com": "Interview Prep",
+  "educative.io": "System Design",
+  "hellointerview.com": "System Design",
   "docs.google.com": "Docs/Writing",
   "linkedin.com": "Job Search",
   "youtube.com": "Learning",
 };
 
-const IGNORE_DOMAIN_SUBSTRINGS = ["accounts.google.com", "oauth", "consent", "login"];
+const IGNORE_DOMAIN_SUBSTRINGS = [
+  "accounts.google.com",
+  "oauth",
+  "consent",
+  "login",
+];
 
 const DOMAIN_ACTIONS: Record<string, string> = {
-  "leetcode.com": "Continue LeetCode practice set",
+  "leetcode.com": "Continue LeetCode practice",
+  "educative.io": "Continue system design prep",
+  "hellointerview.com": "Continue system design prep",
   "docs.google.com": "Resume writing in Google Docs",
-  "linkedin.com": "Open LinkedIn and shortlist roles to apply to",
-  "youtube.com": "Resume the learning video",
+  "linkedin.com": "Review roles and shortlist applications",
 };
 
 export function computeSummary(
   session: Session,
   events: Event[],
+  analysis?: AnalysisResult | null,
 ): ComputedSummary {
   const sorted = [...events].sort((a, b) => a.ts - b.ts);
   const timeline = addDurations(session, sorted);
-  const domains = summarizeDomains(timeline);
-  const recentTitles = getRecentTitles(timeline);
+  const { domains, backgroundTimeSec } = summarizeDomains(timeline);
+  const recentEntries = getRecentEntries(timeline);
   const lastStop = [...timeline]
     .reverse()
     .find((event) => event.type === "TAB_ACTIVE");
   const topDomain = domains[0];
   const lastStopLabel = lastStop?.title || lastStop?.url || "your last tab";
-  const resumeSummary = topDomain
+  const fallbackResumeSummary = topDomain
     ? `You mainly worked on ${topDomain.label} and last stopped at ${lastStopLabel}.`
     : DEFAULT_RESUME_SUMMARY;
-  const nextActions = topDomain
+  const fallbackNextActions = topDomain
     ? domains
         .slice(0, 2)
         .map((domain) =>
-          formatAction(domain.domain, domain.label, recentTitles.get(domain.domain)),
+          formatAction(
+            domain.domain,
+            domain.label,
+            domain.timeSec,
+            recentEntries.get(domain.domain),
+          ),
         )
     : ["(placeholder) Capture next actions after analysis."];
+  const timeBreakdown = buildTimeBreakdown(domains, backgroundTimeSec);
 
   return {
     timeline,
     domains,
+    timeBreakdown,
     lastStop: lastStop
       ? { url: lastStop.url, title: lastStop.title, ts: lastStop.ts }
       : undefined,
-    resumeSummary,
-    nextActions,
-    pendingDecisions: [],
+    resumeSummary: analysis?.resumeSummary ?? fallbackResumeSummary,
+    nextActions: analysis?.nextActions?.length
+      ? analysis.nextActions
+      : fallbackNextActions,
+    pendingDecisions: analysis?.pendingDecisions ?? [],
   };
 }
 
@@ -92,9 +112,13 @@ function resolveTailDuration(session: Session, lastTs: number): number {
   return 30 * 1000;
 }
 
-function summarizeDomains(timeline: TimelineEvent[]): DomainSummary[] {
+function summarizeDomains(timeline: TimelineEvent[]): {
+  domains: DomainSummary[];
+  backgroundTimeSec: number;
+} {
   const domainMap = new Map<string, DomainSummary>();
   const urlRecency = new Map<string, string[]>();
+  let backgroundTimeSec = 0;
 
   for (const event of timeline) {
     if (event.type !== "TAB_ACTIVE") {
@@ -103,6 +127,7 @@ function summarizeDomains(timeline: TimelineEvent[]): DomainSummary[] {
 
     const domain = event.domain ?? safeDomain(event.url);
     if (isIgnoredDomain(domain)) {
+      backgroundTimeSec += event.durationSec ?? 0;
       continue;
     }
     const duration = event.durationSec ?? 0;
@@ -127,9 +152,10 @@ function summarizeDomains(timeline: TimelineEvent[]): DomainSummary[] {
     summary.topUrls = urls.slice(0, 5);
   }
 
-  return Array.from(domainMap.values()).sort(
+  const domains = Array.from(domainMap.values()).sort(
     (a, b) => b.timeSec - a.timeSec,
   );
+  return { domains, backgroundTimeSec };
 }
 
 function safeDomain(url: string): string {
@@ -152,8 +178,10 @@ function isIgnoredDomain(domain: string): boolean {
   return IGNORE_DOMAIN_SUBSTRINGS.some((value) => domain.includes(value));
 }
 
-function getRecentTitles(timeline: TimelineEvent[]): Map<string, string> {
-  const map = new Map<string, string>();
+function getRecentEntries(
+  timeline: TimelineEvent[],
+): Map<string, { title?: string; url?: string }> {
+  const map = new Map<string, { title?: string; url?: string }>();
   for (const event of [...timeline].reverse()) {
     if (event.type !== "TAB_ACTIVE") {
       continue;
@@ -162,8 +190,8 @@ function getRecentTitles(timeline: TimelineEvent[]): Map<string, string> {
     if (isIgnoredDomain(domain)) {
       continue;
     }
-    if (!map.has(domain) && event.title) {
-      map.set(domain, event.title);
+    if (!map.has(domain)) {
+      map.set(domain, { title: event.title, url: event.url });
     }
   }
   return map;
@@ -172,14 +200,35 @@ function getRecentTitles(timeline: TimelineEvent[]): Map<string, string> {
 function formatAction(
   domain: string,
   label: string,
-  title?: string,
+  timeSec: number,
+  entry?: { title?: string; url?: string },
 ): string {
+  if (domain === "docs.google.com" && entry?.url?.includes("/forms")) {
+    return "Finish the form you opened";
+  }
+  if (domain === "youtube.com" && timeSec < 90) {
+    return "Background media";
+  }
   if (domain in DOMAIN_ACTIONS) {
     const base = DOMAIN_ACTIONS[domain];
-    return title ? `${base}: ${title}` : base;
+    return entry?.title ? `${base}: ${entry.title}` : base;
   }
-  if (title) {
-    return `Continue ${label}: ${title}`;
+  if (entry?.title) {
+    return `Continue ${label}: ${entry.title}`;
   }
   return `Resume ${label}`;
+}
+
+function buildTimeBreakdown(
+  domains: DomainSummary[],
+  backgroundTimeSec: number,
+): TimeBreakdownItem[] {
+  const items: TimeBreakdownItem[] = domains.map((domain) => ({
+    label: domain.label,
+    timeSec: domain.timeSec,
+  }));
+  if (backgroundTimeSec > 0) {
+    items.push({ label: "Background", timeSec: backgroundTimeSec });
+  }
+  return items.slice(0, 4);
 }

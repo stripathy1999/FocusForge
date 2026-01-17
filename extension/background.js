@@ -72,3 +72,16 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     console.error("FocusForge window focus error", error);
   }
 });
+
+chrome.runtime.onMessage.addListener((message) => {
+  if (!message || message.type !== "OPEN_URLS") {
+    return;
+  }
+
+  const urls = Array.isArray(message.urls) ? message.urls : [];
+  urls.forEach((url) => {
+    if (typeof url === "string" && url.startsWith("http")) {
+      chrome.tabs.create({ url });
+    }
+  });
+});
