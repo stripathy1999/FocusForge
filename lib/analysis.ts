@@ -27,12 +27,15 @@ export async function runGeminiAnalysis(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2 },
+        generationConfig: {
+          temperature: 0.2,
+        },
       }),
     },
   );
 
   if (!response.ok) {
+    console.warn("Gemini request failed", response.status, response.statusText);
     return null;
   }
 
@@ -41,15 +44,22 @@ export async function runGeminiAnalysis(
   };
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   const parsed = safeParseJson(text);
-  if (!parsed) {
+  const analysis: AnalysisResult = parsed
+    ? {
+        source: "gemini",
+        resumeSummary: parsed.resumeSummary ?? summary.resumeSummary,
+        nextActions: parsed.nextActions ?? summary.nextActions,
+        pendingDecisions: parsed.pendingDecisions ?? [],
+      }
+    : {
+        source: "gemini",
+        resumeSummary: text.trim() || summary.resumeSummary,
+        nextActions: summary.nextActions,
+        pendingDecisions: [],
+      };
+  if (!analysis.resumeSummary) {
     return null;
   }
-
-  const analysis: AnalysisResult = {
-    resumeSummary: parsed.resumeSummary ?? summary.resumeSummary,
-    nextActions: parsed.nextActions ?? summary.nextActions,
-    pendingDecisions: parsed.pendingDecisions ?? [],
-  };
   setAnalysis(sessionId, analysis);
   return analysis;
 }
