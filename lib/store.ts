@@ -12,8 +12,18 @@ type StoreData = {
 
 const STORE_DIR = path.join(process.cwd(), ".data");
 const STORE_PATH = path.join(STORE_DIR, "store.json");
+const USE_MEMORY_ONLY = Boolean(process.env.VERCEL);
+
+const memoryStore: StoreData = {
+  sessions: {},
+  eventsBySession: {},
+  analysisBySession: {},
+};
 
 function loadStore(): StoreData {
+  if (USE_MEMORY_ONLY) {
+    return memoryStore;
+  }
   try {
     const raw = fs.readFileSync(STORE_PATH, "utf-8");
     const parsed = JSON.parse(raw) as StoreData;
@@ -28,6 +38,9 @@ function loadStore(): StoreData {
 }
 
 function saveStore(store: StoreData): void {
+  if (USE_MEMORY_ONLY) {
+    return;
+  }
   fs.mkdirSync(STORE_DIR, { recursive: true });
   fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
 }

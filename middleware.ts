@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const ALLOWED_ORIGINS = [
-  "chrome-extension://cgpohhbmipjmlmpfjecbjhljalqplhhd",
   "http://localhost:3000",
   "https://focusforge-one.vercel.app",
+  "https://focusforge-app-seven.vercel.app",
 ];
 
 function getAllowedOrigin(origin: string | null) {
   if (!origin) {
     return null;
+  }
+  if (origin.startsWith("chrome-extension://")) {
+    return origin;
   }
   if (ALLOWED_ORIGINS.includes(origin)) {
     return origin;
