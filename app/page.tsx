@@ -61,12 +61,15 @@ export default async function Home() {
     <div className="min-h-screen bg-zinc-50 px-6 py-12 text-zinc-900">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <header className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <p className="text-xs uppercase tracking-wide text-zinc-500">
-            FocusForge
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold">
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-full border-2 border-black bg-white flex-shrink-0"></div>
+            <h1 className="text-[96px] font-jura">
+              FocusForge
+            </h1>
+          </div>
+          <h2 className="mt-2 text-3xl font-semibold font-jura">
             Auto-track browser sessions and resume faster.
-          </h1>
+          </h2>
           <p className="mt-4 max-w-2xl text-sm text-zinc-600">
             FocusForge only captures the active tab&apos;s URL, title, and
             timestamps. No page content, no keystrokes, and no personal data
@@ -75,13 +78,13 @@ export default async function Home() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href="/session/live"
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800"
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium font-jura text-white shadow-sm hover:bg-zinc-800"
             >
               Open Session
             </Link>
             <Link
               href="/session/demo"
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium font-jura text-zinc-700 hover:bg-zinc-100"
             >
               View Demo
             </Link>
@@ -89,7 +92,7 @@ export default async function Home() {
         </header>
 
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Recent Sessions</h2>
+          <h2 className="text-lg font-semibold font-jura">Recent Sessions</h2>
           <div className="mt-4 flex flex-col gap-3 text-sm text-zinc-600">
             {sessions.length === 0 ? (
               <p>No sessions yet. Start one from the extension.</p>
@@ -100,7 +103,7 @@ export default async function Home() {
                   className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <div className="font-medium text-zinc-900">
+                    <div className="font-medium font-jura text-zinc-900">
                       {session.id}
                     </div>
                     <div className="mt-1 text-xs text-zinc-500">

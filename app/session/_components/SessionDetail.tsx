@@ -59,7 +59,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             <p className="text-xs uppercase tracking-wide text-zinc-500">
               Session Detail
             </p>
-            <h1 className="text-2xl font-semibold">Session {session.id}</h1>
+            <h1 className="text-2xl font-semibold font-jura">Session {session.id}</h1>
             <div className="flex flex-wrap gap-4 text-sm text-zinc-600">
               <span>Status: {session.status}</span>
               <span>Started: {formatDate(session.started_at)}</span>
@@ -72,10 +72,10 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
           <div className="flex flex-col gap-6">
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Timeline</h2>
+                <h2 className="text-lg font-semibold font-jura">Timeline</h2>
                 <button
                   type="button"
-                  className="text-xs text-blue-600 underline-offset-4 hover:underline"
+                  className="text-xs font-jura text-blue-600 underline-offset-4 hover:underline"
                   onClick={() => setShowFullTimeline((value) => !value)}
                 >
                   {showFullTimeline ? "Show key moments" : "View full timeline"}
@@ -99,7 +99,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     >
                       {event.type === "BREAK" ? (
                         <div className="text-xs text-zinc-500">
-                          <div className="font-medium text-zinc-700">
+                          <div className="font-medium font-jura text-zinc-700">
                             Break detected ({formatDuration(event.durationSec)}) —
                             not counted
                           </div>
@@ -113,7 +113,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                               Duration: {formatDuration(event.durationSec)}
                             </span>
                           </div>
-                          <div className="mt-2 text-sm font-medium text-zinc-900">
+                          <div className="mt-2 text-sm font-medium font-jura text-zinc-900">
                             {event.title || "Untitled tab"}
                           </div>
                           <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
@@ -157,7 +157,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             </div>
 
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold">Workspaces</h2>
+              <h2 className="text-lg font-semibold font-jura">Workspaces</h2>
               {computedSummary.background && (
                 <label className="mt-3 inline-flex items-center gap-2 text-xs text-zinc-600">
                   <input
@@ -181,7 +181,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     >
                       <div className="flex items-center justify-between text-sm">
                         <div>
-                          <span className="font-semibold">{domain.label}</span>
+                          <span className="font-semibold font-jura">{domain.label}</span>
                           <span className="ml-2 text-xs text-zinc-400">
                             {domain.domain}
                           </span>
@@ -210,7 +210,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       {domain.topUrls.length > 0 && (
                         <button
                           type="button"
-                          className="mt-3 inline-flex items-center text-xs font-medium text-blue-600 underline-offset-4 hover:underline"
+                          className="mt-3 inline-flex items-center text-xs font-medium font-jura text-blue-600 underline-offset-4 hover:underline"
                           onClick={() => handleReopen(domain.topUrls)}
                         >
                           Reopen workspace
@@ -223,7 +223,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   <div className="rounded-xl border border-dashed border-zinc-200 bg-white p-4">
                     <div className="flex items-center justify-between text-sm">
                       <div>
-                        <span className="font-semibold">
+                        <span className="font-semibold font-jura">
                           {computedSummary.background.label}
                         </span>
                         <span className="ml-2 text-xs text-zinc-400">
@@ -259,10 +259,10 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
 
           <aside className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Resume Panel</h2>
+              <h2 className="text-lg font-semibold font-jura">Resume Panel</h2>
               {computedSummary.aiSummary && (
                 <span
-                  className="rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-purple-700"
+                  className="rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold font-jura uppercase tracking-wide text-purple-700"
                   title="Generated using Gemini based on session activity (URLs + timing only). No content captured."
                 >
                   ✨ AI-generated summary
@@ -306,7 +306,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
-                  className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-60"
+                  className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold font-jura text-white shadow-sm hover:bg-zinc-800 disabled:opacity-60"
                   onClick={() =>
                     computedSummary.resumeUrls.length
                       ? handleReopen(computedSummary.resumeUrls)
@@ -318,7 +318,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </button>
                 <button
                   type="button"
-                  className="text-left text-xs text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
+                  className="text-left text-xs font-jura text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
                   onClick={() =>
                     computedSummary.lastStop?.url
                       ? handleReopen([computedSummary.lastStop.url])
@@ -347,7 +347,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     Resume:{" "}
                     <button
                       type="button"
-                      className="text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
+                      className="font-jura text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
                       onClick={() =>
                         computedSummary.lastStop?.url
                           ? handleReopen([computedSummary.lastStop.url])
@@ -362,7 +362,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     Continue in:{" "}
                     <button
                       type="button"
-                      className="text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
+                      className="font-jura text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
                       onClick={() =>
                         computedSummary.domains[0]?.topUrls?.length
                           ? handleReopen(computedSummary.domains[0].topUrls)
@@ -374,7 +374,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </button>
                   </div>
                   <div className="rounded-md border border-zinc-200 px-3 py-2 text-zinc-700">
-                    <div className="text-xs font-medium">
+                    <div className="text-xs font-medium font-jura">
                       Review top 3 pages visited
                     </div>
                     <div className="mt-2 space-y-1 text-xs text-zinc-600">
@@ -385,7 +385,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           <button
                             key={page.url}
                             type="button"
-                            className="block w-full truncate text-left text-blue-600 underline-offset-4 hover:underline"
+                            className="block w-full truncate text-left font-jura text-blue-600 underline-offset-4 hover:underline"
                             title={page.url}
                             onClick={() => handleReopen([page.url])}
                           >
@@ -435,15 +435,15 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </p>
                 <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs text-zinc-600">
                   {computedSummary.focus.intentMissing ? (
-                    <div className="text-sm font-semibold text-zinc-900">
+                    <div className="text-sm font-semibold font-jura text-zinc-900">
                       Time split across different activities
                     </div>
                   ) : computedSummary.focus.tooShort ? (
-                    <div className="text-sm font-semibold text-zinc-900">
+                    <div className="text-sm font-semibold font-jura text-zinc-900">
                       Session too short to assess focus
                     </div>
                   ) : (
-                    <div className="text-2xl font-semibold text-zinc-900">
+                    <div className="text-2xl font-semibold font-jura text-zinc-900">
                       {computedSummary.focus.displayFocusPct}% Aligned
                     </div>
                   )}

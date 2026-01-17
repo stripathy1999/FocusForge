@@ -9,7 +9,7 @@ export default function LiveSessionPage() {
         <p className="text-xs uppercase tracking-wide text-zinc-500">
           Live Session
         </p>
-        <h1 className="mt-2 text-2xl font-semibold">
+        <h1 className="mt-2 text-2xl font-semibold font-jura">
           Use the extension to start a session
         </h1>
         <p className="mt-3 text-sm text-zinc-600">
