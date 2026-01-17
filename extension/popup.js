@@ -65,14 +65,20 @@ function render(state) {
   const status = state.status || "stopped";
   const paused = Boolean(state.paused);
   const running = status === "running";
-  const statusLabel = running
-    ? paused
-      ? "Paused"
-      : "Running"
-    : status === "auto_ended"
-      ? "Away"
-      : "Stopped";
-  const statusClass = running ? (paused ? "paused" : "running") : (status === "auto_ended" ? "away" : "stopped");
+  const statusLabel = status === "paused"
+    ? "Paused"
+    : running
+      ? "Running"
+      : status === "auto_ended"
+        ? "Away"
+        : "Stopped";
+  const statusClass = status === "paused"
+    ? "paused"
+    : running
+      ? "running"
+      : status === "auto_ended"
+        ? "away"
+        : "stopped";
   statusText.textContent = statusLabel;
   statusText.className = "status-badge " + statusClass;
   pauseBtn.textContent = paused ? "Resume" : "Pause";
@@ -83,9 +89,10 @@ function render(state) {
   }
 
   const hasIntent = Boolean((intentInput?.value || state.intent || "").trim());
-  startBtn.disabled = running || !hasIntent;
-  pauseBtn.disabled = !running;
-  stopBtn.disabled = !running;
+  const sessionActive = status === "running" || status === "paused";
+  startBtn.disabled = sessionActive || !hasIntent;
+  pauseBtn.disabled = !sessionActive;
+  stopBtn.disabled = !sessionActive;
 
   if (resumePrompt) {
     resumePrompt.style.display = state.autoEndedSessionId ? "block" : "none";
@@ -155,7 +162,7 @@ async function handlePauseToggle() {
     statusText.className = "status status--error";
     return;
   }
-  if (state.status !== "running") {
+  if (state.status !== "running" && state.status !== "paused") {
     statusText.textContent = "Session is not running";
     statusText.className = "status status--error";
     return;
@@ -172,7 +179,8 @@ async function handlePauseToggle() {
       statusText.className = "status status--error";
       return;
     }
-    await setState({ paused: false, status: "running" });
+    const totalPausedMs = (state.totalPausedMs || 0) + (Date.now() - (state.pausedAt || 0));
+    await setState({ paused: false, status: "running", totalPausedMs, pausedAt: null });
   } else {
     const response = await apiPost("/api/session/pause", {
       sessionId: state.sessionId,
@@ -184,7 +192,7 @@ async function handlePauseToggle() {
       statusText.className = "status status--error";
       return;
     }
-    await setState({ paused: true, status: "paused" });
+    await setState({ paused: true, status: "paused", pausedAt: Date.now() });
   }
   render(await getState());
 }
