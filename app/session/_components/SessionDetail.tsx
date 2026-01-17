@@ -128,28 +128,39 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                             {event.title || "Untitled tab"}
                           </div>
                           <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
-                            <span>{event.domain ?? "unknown"}</span>
                             {event.url ? (
-                              <button
-                                type="button"
-                                className="underline-offset-4 hover:underline"
-                                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
-                                title={event.url}
-                                onClick={() =>
-                                  navigator.clipboard.writeText(event.url)
-                                }
-                              >
-                                Copy URL
-                              </button>
+                              <>
+                                <span className="truncate">{event.url}</span>
+                                <button
+                                  type="button"
+                                  className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
+                                  title="Copy URL"
+                                  onClick={() =>
+                                    navigator.clipboard.writeText(event.url)
+                                  }
+                                >
+                                  <svg 
+                                    width="14" 
+                                    height="14" 
+                                    viewBox="0 0 16 16" 
+                                    fill="none" 
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    style={{ color: '#4AB5C9' }}
+                                  >
+                                    <path 
+                                      d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z" 
+                                      stroke="currentColor" 
+                                      strokeWidth="1.2" 
+                                      strokeLinecap="round" 
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                </button>
+                              </>
                             ) : (
                               <span>No URL</span>
                             )}
                           </div>
-                          {event.url && (
-                            <div className="mt-1 truncate text-xs text-zinc-400">
-                              {event.url}
-                            </div>
-                          )}
                         </>
                       )}
                     </div>
