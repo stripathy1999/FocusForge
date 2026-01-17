@@ -221,24 +221,48 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
 
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-900">
+    <div className="min-h-screen px-6 py-10 text-zinc-900" style={{ backgroundColor: '#BDE8F5' }}>
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
-        <header className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">
-              Session Detail
-            </p>
-            <h1 
-              className="text-2xl font-semibold"
-              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
-            >
-              Session {session.id}
-            </h1>
-            <div className="flex flex-wrap gap-4 text-sm text-zinc-600">
-              <span>Status: {session.status}</span>
-              <span>Started: {formatDate(session.started_at)}</span>
-              <span>Ended: {formatDate(session.ended_at)}</span>
+        <header className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">
+                Session Detail
+              </p>
+              <h1 
+                className="text-2xl font-semibold"
+                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
+              >
+                Session {session.id}
+              </h1>
+              <div className="flex flex-wrap gap-3 text-sm text-zinc-600">
+                <span>Status: {session.status}</span>
+                <span>Started: {formatDate(session.started_at)}</span>
+                <span>Ended: {formatDate(session.ended_at)}</span>
+              </div>
             </div>
+            <Link
+              href="/"
+              className="flex items-center justify-center rounded-lg p-3 text-white shadow-sm transition-colors hover:opacity-90 shrink-0"
+              style={{ backgroundColor: '#32578E' }}
+              aria-label="Return to home"
+            >
+              <svg 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path 
+                  d="M19 12H5M5 12L12 19M5 12L12 5" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
           </div>
         </header>
 

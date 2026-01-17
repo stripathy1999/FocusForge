@@ -59,7 +59,7 @@ export default async function Home() {
   const sessions = await getSessions();
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-12 text-zinc-900">
+    <div className="min-h-screen px-6 py-12 text-zinc-900" style={{ backgroundColor: '#BDE8F5' }}>
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <header className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
           <div className="flex items-center gap-3">
