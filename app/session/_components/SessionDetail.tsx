@@ -333,11 +333,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   {showFullTimeline ? "Show key moments" : "View full timeline"}
                 </button>
               </div>
-              {!showFullTimeline && (
-                <p className="mt-1 text-xs text-zinc-500">
-                  Showing key moments · View full timeline
-                </p>
-              )}
               <div className="mt-4 flex flex-col gap-4">
                 {keyTimeline.length === 0 ? (
                   <p className="text-sm text-zinc-500">
@@ -460,8 +455,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         {computedSummary.intent_tags.map((tag) => (
                           <span
                             key={tag}
-                            className="rounded-full border px-2 py-1 text-xs text-zinc-700"
-                            style={{ backgroundColor: '#9ED5FF', borderColor: '#9ED5FF' }}
+                            className="rounded-full border px-2 py-1 text-xs"
+                            style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#9ED5FF', borderColor: '#9ED5FF', color: '#32578E', fontWeight: 500 }}
                           >
                             {tag}
                           </span>
@@ -720,7 +715,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </div>
               </div>
               <div>
-                <p className="text-sm uppercase tracking-wide text-zinc-500">
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Pending Decisions
                 </p>
                 <ul className="mt-2 list-disc pl-5 text-base">
@@ -730,7 +725,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </ul>
               </div>
               <div>
-                <p className="text-sm uppercase tracking-wide text-zinc-500">
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Last Stop
                 </p>
                 {computedSummary.lastStop ? (
@@ -738,7 +733,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     href={computedSummary.lastStop.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-2 inline-block text-base underline-offset-4 hover:underline"
+                    className="mt-2 inline-block text-sm underline-offset-4 hover:underline"
                     style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                   >
                     {computedSummary.lastStop.title ||
