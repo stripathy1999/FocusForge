@@ -49,7 +49,9 @@ function render(state) {
     : status === "auto_ended"
       ? "Away"
       : "Stopped";
-  statusText.textContent = `Status: ${statusLabel}`;
+  const statusClass = running ? (paused ? "paused" : "running") : (status === "auto_ended" ? "away" : "stopped");
+  statusText.textContent = statusLabel;
+  statusText.className = "status-badge " + statusClass;
   pauseBtn.textContent = paused ? "Resume" : "Pause";
   sessionIdEl.textContent = state.sessionId || "—";
   baseUrlInput.value = state.baseUrl || DEFAULT_BASE_URL;
@@ -61,9 +63,6 @@ function render(state) {
   startBtn.disabled = running || !hasIntent;
   pauseBtn.disabled = !running;
   stopBtn.disabled = !running;
-  startBtn.style.opacity = startBtn.disabled ? "0.6" : "1";
-  pauseBtn.style.opacity = running ? "1" : "0.6";
-  stopBtn.style.opacity = running ? "1" : "0.6";
 
   if (resumePrompt) {
     resumePrompt.style.display = state.autoEndedSessionId ? "block" : "none";
@@ -73,7 +72,8 @@ function render(state) {
 async function handleStart() {
   const intent = intentInput?.value?.trim() || "";
   if (!intent) {
-    statusText.textContent = "Status: Add an intent to start";
+    statusText.textContent = "Add an intent to start";
+    statusText.className = "status status--error";
     return;
   }
   const response = await apiPost("/api/session/start", {
@@ -81,7 +81,8 @@ async function handleStart() {
   });
   if (!response.ok) {
     const message = await response.text();
-    statusText.textContent = `Status: Error starting session (${response.status})`;
+    statusText.textContent = "Error starting session (" + response.status + ")";
+    statusText.className = "status status--error";
     console.error("Start session failed", message);
     return;
   }
@@ -99,11 +100,13 @@ async function handleStart() {
 async function handlePauseToggle() {
   const state = await getState();
   if (!state.sessionId) {
-    statusText.textContent = "Status: Start a session first";
+    statusText.textContent = "Start a session first";
+    statusText.className = "status status--error";
     return;
   }
   if (state.status !== "running") {
-    statusText.textContent = "Status: Session is not running";
+    statusText.textContent = "Session is not running";
+    statusText.className = "status status--error";
     return;
   }
 
@@ -114,7 +117,8 @@ async function handlePauseToggle() {
       title: "",
     });
     if (!response.ok) {
-      statusText.textContent = "Status: Error resuming";
+      statusText.textContent = "Error resuming";
+      statusText.className = "status status--error";
       return;
     }
     await setState({ paused: false, status: "running" });
@@ -125,7 +129,8 @@ async function handlePauseToggle() {
       title: "",
     });
     if (!response.ok) {
-      statusText.textContent = "Status: Error pausing";
+      statusText.textContent = "Error pausing";
+      statusText.className = "status status--error";
       return;
     }
     await setState({ paused: true, status: "paused" });
@@ -136,7 +141,8 @@ async function handlePauseToggle() {
 async function handleStop() {
   const state = await getState();
   if (!state.sessionId) {
-    statusText.textContent = "Status: Start a session first";
+    statusText.textContent = "Start a session first";
+    statusText.className = "status status--error";
     return;
   }
 
@@ -146,7 +152,8 @@ async function handleStop() {
     title: "",
   });
   if (!response.ok) {
-    statusText.textContent = "Status: Error stopping session";
+    statusText.textContent = "Error stopping session";
+    statusText.className = "status status--error";
     return;
   }
   await setState({ status: "ended", paused: false, autoEndedSessionId: undefined });
@@ -156,12 +163,14 @@ async function handleStop() {
 async function handleStartFresh() {
   const intent = intentInput?.value?.trim() || "";
   if (!intent) {
-    statusText.textContent = "Status: Add an intent to start";
+    statusText.textContent = "Add an intent to start";
+    statusText.className = "status status--error";
     return;
   }
   const response = await apiPost("/api/session/start", { intent });
   if (!response.ok) {
-    statusText.textContent = "Status: Error starting session";
+    statusText.textContent = "Error starting session";
+    statusText.className = "status status--error";
     return;
   }
   const data = await response.json();
@@ -179,7 +188,8 @@ async function handleContinueLast() {
   const state = await getState();
   const sessionId = state.autoEndedSessionId;
   if (!sessionId) {
-    statusText.textContent = "Status: No previous session found";
+    statusText.textContent = "No previous session found";
+    statusText.className = "status status--error";
     return;
   }
   const response = await apiPost("/api/session/resume", {
@@ -188,7 +198,8 @@ async function handleContinueLast() {
     title: "",
   });
   if (!response.ok) {
-    statusText.textContent = "Status: Error resuming session";
+    statusText.textContent = "Error resuming session";
+    statusText.className = "status status--error";
     return;
   }
   await setState({
@@ -221,7 +232,8 @@ async function handleSaveIntent() {
     intent,
   });
   if (!response.ok) {
-    statusText.textContent = "Status: Error saving intent";
+    statusText.textContent = "Error saving intent";
+    statusText.className = "status status--error";
     return;
   }
   render(await getState());
