@@ -10,6 +10,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-jura: var(--font-jura);
+  --font-family-jura: var(--font-jura), sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +25,12 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.font-jura {
+  font-family: var(--font-jura), sans-serif;
+}
+
+@utility font-jura {
+  font-family: var(--font-jura), sans-serif;
 }

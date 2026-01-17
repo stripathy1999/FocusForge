@@ -23,6 +23,7 @@ export function SessionLiveClient() {
           type="button"
           onClick={() => sessionId && router.push(`/session/${sessionId}`)}
           className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800"
+          style={{ fontFamily: 'var(--font-jura), sans-serif' }}
         >
           Open Session
         </button>

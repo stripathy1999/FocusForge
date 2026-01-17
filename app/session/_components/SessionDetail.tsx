@@ -59,7 +59,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             <p className="text-xs uppercase tracking-wide text-zinc-500">
               Session Detail
             </p>
-            <h1 className="text-2xl font-semibold">Session {session.id}</h1>
+            <h1 
+              className="text-2xl font-semibold"
+              style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+            >
+              Session {session.id}
+            </h1>
             <div className="flex flex-wrap gap-4 text-sm text-zinc-600">
               <span>Status: {session.status}</span>
               <span>Started: {formatDate(session.started_at)}</span>
@@ -72,10 +77,16 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
           <div className="flex flex-col gap-6">
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Timeline</h2>
+                <h2 
+                  className="text-lg font-semibold"
+                  style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+                >
+                  Timeline
+                </h2>
                 <button
                   type="button"
                   className="text-xs text-blue-600 underline-offset-4 hover:underline"
+                  style={{ fontFamily: 'var(--font-jura), sans-serif' }}
                   onClick={() => setShowFullTimeline((value) => !value)}
                 >
                   {showFullTimeline ? "Show key moments" : "View full timeline"}
@@ -122,6 +133,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                               <button
                                 type="button"
                                 className="text-blue-600 underline-offset-4 hover:underline"
+                                style={{ fontFamily: 'var(--font-jura), sans-serif' }}
                                 title={event.url}
                                 onClick={() =>
                                   navigator.clipboard.writeText(event.url)
@@ -157,7 +169,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             </div>
 
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold">Workspaces</h2>
+              <h2 
+                className="text-lg font-semibold"
+                style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+              >
+                Workspaces
+              </h2>
               {computedSummary.background && (
                 <label className="mt-3 inline-flex items-center gap-2 text-xs text-zinc-600">
                   <input
@@ -211,6 +228,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         <button
                           type="button"
                           className="mt-3 inline-flex items-center text-xs font-medium text-blue-600 underline-offset-4 hover:underline"
+                          style={{ fontFamily: 'var(--font-jura), sans-serif' }}
                           onClick={() => handleReopen(domain.topUrls)}
                         >
                           Reopen workspace
@@ -259,7 +277,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
 
           <aside className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Resume Panel</h2>
+              <h2 
+                className="text-lg font-semibold"
+                style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+              >
+                Resume Panel
+              </h2>
               {computedSummary.aiSummary && (
                 <span
                   className="rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-purple-700"
@@ -307,6 +330,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <button
                   type="button"
                   className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-60"
+                  style={{ fontFamily: 'var(--font-jura), sans-serif' }}
                   onClick={() =>
                     computedSummary.resumeUrls.length
                       ? handleReopen(computedSummary.resumeUrls)
@@ -319,6 +343,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <button
                   type="button"
                   className="text-left text-xs text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
+                  style={{ fontFamily: 'var(--font-jura), sans-serif' }}
                   onClick={() =>
                     computedSummary.lastStop?.url
                       ? handleReopen([computedSummary.lastStop.url])
@@ -348,6 +373,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <button
                       type="button"
                       className="text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
+                      style={{ fontFamily: 'var(--font-jura), sans-serif' }}
                       onClick={() =>
                         computedSummary.lastStop?.url
                           ? handleReopen([computedSummary.lastStop.url])
@@ -363,6 +389,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <button
                       type="button"
                       className="text-blue-600 underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
+                      style={{ fontFamily: 'var(--font-jura), sans-serif' }}
                       onClick={() =>
                         computedSummary.domains[0]?.topUrls?.length
                           ? handleReopen(computedSummary.domains[0].topUrls)
@@ -386,6 +413,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                             key={page.url}
                             type="button"
                             className="block w-full truncate text-left text-blue-600 underline-offset-4 hover:underline"
+                            style={{ fontFamily: 'var(--font-jura), sans-serif' }}
                             title={page.url}
                             onClick={() => handleReopen([page.url])}
                           >
