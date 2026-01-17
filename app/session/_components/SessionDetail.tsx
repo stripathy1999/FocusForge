@@ -740,16 +740,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               </div>
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
-                  Pending Decisions
-                </p>
-                <ul className="mt-2 list-disc pl-5 text-base">
-                  {computedSummary.pendingDecisions.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Last Stop
                 </p>
                 {computedSummary.lastStop ? (

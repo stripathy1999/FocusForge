@@ -118,9 +118,10 @@ export default async function Home() {
               <p>No sessions yet. Start one from the extension.</p>
             ) : (
               sessions.slice(0, 5).map((session) => (
-                <div
+                <Link
                   key={session.id}
-                  className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 transition-all duration-200 hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between"
+                  href={`/session/${session.id}`}
+                  className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 transition-all duration-200 hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between cursor-pointer"
                 >
                   <div>
                     <div className="font-medium font-jura" style={{ color: '#32578E' }}>
@@ -138,14 +139,7 @@ export default async function Home() {
                         : "—"}
                     </div>
                   </div>
-                  <Link
-                    href={`/session/${session.id}`}
-                    className="underline"
-                    style={{ color: '#4777B9' }}
-                  >
-                    Open
-                  </Link>
-                </div>
+                </Link>
               ))
             )}
           </div>
