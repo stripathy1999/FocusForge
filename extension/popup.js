@@ -5,6 +5,7 @@ const startBtn = document.getElementById("startBtn");
 const pauseBtn = document.getElementById("pauseBtn");
 const stopBtn = document.getElementById("stopBtn");
 const sessionIdEl = document.getElementById("sessionId");
+const timerEl = document.getElementById("timerEl");
 const baseUrlInput = document.getElementById("baseUrlInput");
 const saveBaseUrlBtn = document.getElementById("saveBaseUrlBtn");
 const intentInput = document.getElementById("intentInput");
@@ -12,6 +13,8 @@ const saveIntentBtn = document.getElementById("saveIntentBtn");
 const resumePrompt = document.getElementById("resumePrompt");
 const startFreshBtn = document.getElementById("startFreshBtn");
 const continueLastBtn = document.getElementById("continueLastBtn");
+
+let timerInterval = null;
 
 async function getState() {
   return await chrome.storage.local.get([
@@ -21,6 +24,9 @@ async function getState() {
     "baseUrl",
     "autoEndedSessionId",
     "intent",
+    "startedAt",
+    "pausedAt",
+    "totalPausedMs",
   ]);
 }
 
@@ -36,6 +42,23 @@ async function apiPost(path, body) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
   });
+}
+
+function formatElapsed(ms) {
+  if (ms < 0) return "0:00";
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}:${String(m % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function getElapsedMs(state) {
+  if (!state.startedAt || state.startedAt === 0) return null;
+  if (state.status !== "running" && state.status !== "paused") return null;
+  const total = state.totalPausedMs || 0;
+  if (state.paused && state.pausedAt) return state.pausedAt - state.startedAt - total;
+  return Date.now() - state.startedAt - total;
 }
 
 function render(state) {
@@ -67,6 +90,31 @@ function render(state) {
   if (resumePrompt) {
     resumePrompt.style.display = state.autoEndedSessionId ? "block" : "none";
   }
+
+  if (timerEl) {
+    const showTimer = (state.status === "running" || state.status === "paused") && state.startedAt && state.startedAt > 0;
+    if (showTimer) {
+      const ms = getElapsedMs(state);
+      timerEl.textContent = ms != null ? formatElapsed(ms) : "—";
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        getState().then((s) => {
+          if (s.status === "running" || s.status === "paused") {
+            const m = getElapsedMs(s);
+            timerEl.textContent = m != null ? formatElapsed(m) : "—";
+          } else {
+            timerEl.textContent = "—";
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+        });
+      }, 1000);
+    } else {
+      timerEl.textContent = "—";
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
 }
 
 async function handleStart() {
@@ -93,6 +141,9 @@ async function handleStart() {
     paused: false,
     autoEndedSessionId: undefined,
     intent,
+    startedAt: Date.now(),
+    totalPausedMs: 0,
+    pausedAt: null,
   });
   render(await getState());
 }
@@ -156,7 +207,7 @@ async function handleStop() {
     statusText.className = "status status--error";
     return;
   }
-  await setState({ status: "ended", paused: false, autoEndedSessionId: undefined });
+  await setState({ status: "ended", paused: false, autoEndedSessionId: undefined, startedAt: 0, pausedAt: null, totalPausedMs: 0 });
   render(await getState());
 }
 
@@ -207,6 +258,9 @@ async function handleContinueLast() {
     status: "running",
     paused: false,
     autoEndedSessionId: undefined,
+    startedAt: Date.now(),
+    totalPausedMs: 0,
+    pausedAt: null,
   });
   render(await getState());
 }
