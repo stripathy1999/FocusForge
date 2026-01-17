@@ -29,9 +29,22 @@ export type DomainSummary = {
   topUrls: string[];
 };
 
+export type BackgroundSummary = {
+  label: string;
+  timeSec: number;
+  topUrls: string[];
+  domains: string[];
+};
+
 export type TimeBreakdownItem = {
   label: string;
   timeSec: number;
+};
+
+export type TopPage = {
+  url: string;
+  title: string;
+  domain: string;
 };
 
 export type AnalysisResult = {
@@ -43,7 +56,9 @@ export type AnalysisResult = {
 export type ComputedSummary = {
   timeline: TimelineEvent[];
   domains: DomainSummary[];
+  background?: BackgroundSummary;
   timeBreakdown: TimeBreakdownItem[];
+  topPages: TopPage[];
   lastStop?: { url: string; title: string; ts: number };
   resumeSummary: string;
   nextActions: string[];

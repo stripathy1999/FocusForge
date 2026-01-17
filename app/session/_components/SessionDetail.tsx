@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { ComputedSummary, Session } from "@/lib/types";
 
@@ -37,6 +38,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const timeline = computedSummary.timeline.filter(
     (event) => event.type !== "STOP",
   );
+  const [showBackground, setShowBackground] = useState(false);
 
   const handleReopen = (urls: string[]) => {
     window.postMessage({ type: "FOCUSFORGE_REOPEN", urls }, "*");
@@ -118,6 +120,16 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
 
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold">Workspaces</h2>
+              {computedSummary.background && (
+                <label className="mt-3 inline-flex items-center gap-2 text-xs text-zinc-600">
+                  <input
+                    type="checkbox"
+                    checked={showBackground}
+                    onChange={(event) => setShowBackground(event.target.checked)}
+                  />
+                  Show Background/Auth (hidden by default)
+                </label>
+              )}
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 {computedSummary.domains.length === 0 ? (
                   <p className="text-sm text-zinc-500">
@@ -169,6 +181,40 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </div>
                   ))
                 )}
+                {showBackground && computedSummary.background && (
+                  <div className="rounded-xl border border-dashed border-zinc-200 bg-white p-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <div>
+                        <span className="font-semibold">
+                          {computedSummary.background.label}
+                        </span>
+                        <span className="ml-2 text-xs text-zinc-400">
+                          {computedSummary.background.domains.join(", ")}
+                        </span>
+                      </div>
+                      <span className="text-zinc-600">
+                        {formatDuration(computedSummary.background.timeSec)}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-600">
+                      {computedSummary.background.topUrls.length === 0 ? (
+                        <span>No URLs captured.</span>
+                      ) : (
+                        computedSummary.background.topUrls.map((url) => (
+                          <a
+                            key={url}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="truncate text-blue-600 underline-offset-4 hover:underline"
+                          >
+                            {url}
+                          </a>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -191,6 +237,60 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-zinc-500">
+                  Quick Actions
+                </p>
+                <div className="mt-2 flex flex-col gap-2 text-xs">
+                  <button
+                    type="button"
+                    className="rounded-md border border-zinc-200 px-3 py-2 text-left text-zinc-700 hover:bg-zinc-50"
+                    onClick={() =>
+                      computedSummary.lastStop?.url
+                        ? handleReopen([computedSummary.lastStop.url])
+                        : null
+                    }
+                    disabled={!computedSummary.lastStop?.url}
+                  >
+                    Resume: Open last stop tab
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-zinc-200 px-3 py-2 text-left text-zinc-700 hover:bg-zinc-50"
+                    onClick={() =>
+                      computedSummary.domains[0]?.topUrls?.length
+                        ? handleReopen(computedSummary.domains[0].topUrls)
+                        : null
+                    }
+                    disabled={!computedSummary.domains[0]?.topUrls?.length}
+                  >
+                    Continue in: {computedSummary.domains[0]?.label ?? "Top"}{" "}
+                    workspace
+                  </button>
+                  <div className="rounded-md border border-zinc-200 px-3 py-2 text-zinc-700">
+                    <div className="text-xs font-medium">
+                      Review top 3 pages visited
+                    </div>
+                    <div className="mt-2 space-y-1 text-xs text-zinc-600">
+                      {computedSummary.topPages.length === 0 ? (
+                        <p>No pages yet.</p>
+                      ) : (
+                        computedSummary.topPages.map((page) => (
+                          <button
+                            key={page.url}
+                            type="button"
+                            className="block w-full truncate text-left text-blue-600 underline-offset-4 hover:underline"
+                            title={page.url}
+                            onClick={() => handleReopen([page.url])}
+                          >
+                            {page.title}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wide text-zinc-500">

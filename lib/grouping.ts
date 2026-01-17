@@ -1,10 +1,12 @@
 import {
   ComputedSummary,
   AnalysisResult,
+  BackgroundSummary,
   DomainSummary,
   Event,
   Session,
   TimelineEvent,
+  TopPage,
   TimeBreakdownItem,
 } from "@/lib/types";
 
@@ -42,34 +44,32 @@ export function computeSummary(
 ): ComputedSummary {
   const sorted = [...events].sort((a, b) => a.ts - b.ts);
   const timeline = addDurations(session, sorted);
-  const { domains, backgroundTimeSec } = summarizeDomains(timeline);
+  const { domains, background } = summarizeDomains(timeline);
   const recentEntries = getRecentEntries(timeline);
+  const topPages = getTopPages(timeline, 3);
   const lastStop = [...timeline]
     .reverse()
     .find((event) => event.type === "TAB_ACTIVE");
   const topDomain = domains[0];
   const lastStopLabel = lastStop?.title || lastStop?.url || "your last tab";
   const fallbackResumeSummary = topDomain
-    ? `You mainly worked on ${topDomain.label} and last stopped at ${lastStopLabel}.`
+    ? `You spent most time on ${topDomain.domain} and last stopped at ${lastStopLabel}.`
     : DEFAULT_RESUME_SUMMARY;
   const fallbackNextActions = topDomain
-    ? domains
-        .slice(0, 2)
-        .map((domain) =>
-          formatAction(
-            domain.domain,
-            domain.label,
-            domain.timeSec,
-            recentEntries.get(domain.domain),
-          ),
-        )
+    ? [
+        "Resume: Open last stop tab",
+        `Continue in: ${topDomain.label} workspace`,
+        "Review top 3 pages visited",
+      ]
     : ["(placeholder) Capture next actions after analysis."];
-  const timeBreakdown = buildTimeBreakdown(domains, backgroundTimeSec);
+  const timeBreakdown = buildTimeBreakdown(domains, background?.timeSec ?? 0);
 
   return {
     timeline,
     domains,
+    background,
     timeBreakdown,
+    topPages,
     lastStop: lastStop
       ? { url: lastStop.url, title: lastStop.title, ts: lastStop.ts }
       : undefined,
@@ -114,11 +114,13 @@ function resolveTailDuration(session: Session, lastTs: number): number {
 
 function summarizeDomains(timeline: TimelineEvent[]): {
   domains: DomainSummary[];
-  backgroundTimeSec: number;
+  background?: BackgroundSummary;
 } {
   const domainMap = new Map<string, DomainSummary>();
   const urlRecency = new Map<string, string[]>();
   let backgroundTimeSec = 0;
+  const backgroundUrls: string[] = [];
+  const backgroundDomains = new Set<string>();
 
   for (const event of timeline) {
     if (event.type !== "TAB_ACTIVE") {
@@ -128,6 +130,10 @@ function summarizeDomains(timeline: TimelineEvent[]): {
     const domain = event.domain ?? safeDomain(event.url);
     if (isIgnoredDomain(domain)) {
       backgroundTimeSec += event.durationSec ?? 0;
+      backgroundDomains.add(domain);
+      if (event.url && !backgroundUrls.includes(event.url)) {
+        backgroundUrls.unshift(event.url);
+      }
       continue;
     }
     const duration = event.durationSec ?? 0;
@@ -155,7 +161,16 @@ function summarizeDomains(timeline: TimelineEvent[]): {
   const domains = Array.from(domainMap.values()).sort(
     (a, b) => b.timeSec - a.timeSec,
   );
-  return { domains, backgroundTimeSec };
+  const background =
+    backgroundTimeSec > 0
+      ? {
+          label: "Background/Auth",
+          timeSec: backgroundTimeSec,
+          topUrls: backgroundUrls.slice(0, 5),
+          domains: Array.from(backgroundDomains),
+        }
+      : undefined;
+  return { domains, background };
 }
 
 function safeDomain(url: string): string {
@@ -231,4 +246,31 @@ function buildTimeBreakdown(
     items.push({ label: "Background", timeSec: backgroundTimeSec });
   }
   return items.slice(0, 4);
+}
+
+function getTopPages(timeline: TimelineEvent[], limit: number): TopPage[] {
+  const pages: TopPage[] = [];
+  const seen = new Set<string>();
+  for (const event of [...timeline].reverse()) {
+    if (event.type !== "TAB_ACTIVE") {
+      continue;
+    }
+    const domain = event.domain ?? safeDomain(event.url);
+    if (isIgnoredDomain(domain)) {
+      continue;
+    }
+    if (!event.url || seen.has(event.url)) {
+      continue;
+    }
+    seen.add(event.url);
+    pages.push({
+      url: event.url,
+      title: event.title || event.url,
+      domain,
+    });
+    if (pages.length >= limit) {
+      break;
+    }
+  }
+  return pages;
 }
