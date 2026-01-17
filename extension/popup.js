@@ -34,10 +34,20 @@ async function apiPost(path, body) {
 function render(state) {
   const status = state.status || "stopped";
   const paused = Boolean(state.paused);
-  statusText.textContent = `Status: ${paused ? "Paused" : status}`;
+  const running = status === "running";
+  statusText.textContent = `Status: ${
+    running ? (paused ? "Paused" : "Running") : "Stopped"
+  }`;
   pauseBtn.textContent = paused ? "Resume" : "Pause";
   sessionIdEl.textContent = state.sessionId || "—";
   baseUrlInput.value = state.baseUrl || DEFAULT_BASE_URL;
+
+  startBtn.disabled = running;
+  pauseBtn.disabled = !running;
+  stopBtn.disabled = !running;
+  startBtn.style.opacity = running ? "0.6" : "1";
+  pauseBtn.style.opacity = running ? "1" : "0.6";
+  stopBtn.style.opacity = running ? "1" : "0.6";
 }
 
 async function handleStart() {
@@ -55,6 +65,10 @@ async function handlePauseToggle() {
   const state = await getState();
   if (!state.sessionId) {
     statusText.textContent = "Status: Start a session first";
+    return;
+  }
+  if (state.status !== "running") {
+    statusText.textContent = "Status: Session is not running";
     return;
   }
 

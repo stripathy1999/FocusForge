@@ -1,7 +1,20 @@
-import { ComputedSummary, DomainSummary, Event, Session, TimelineEvent } from "@/lib/types";
+import {
+  ComputedSummary,
+  DomainSummary,
+  Event,
+  Session,
+  TimelineEvent,
+} from "@/lib/types";
 
 const DEFAULT_RESUME_SUMMARY =
   "Resume insights will appear here once analysis is enabled.";
+
+const DOMAIN_LABELS: Record<string, string> = {
+  "leetcode.com": "Interview Prep",
+  "docs.google.com": "Docs/Writing",
+  "linkedin.com": "Job Search",
+  "youtube.com": "Learning",
+};
 
 export function computeSummary(
   session: Session,
@@ -13,6 +26,16 @@ export function computeSummary(
   const lastStop = [...timeline]
     .reverse()
     .find((event) => event.type === "TAB_ACTIVE");
+  const topDomain = domains[0];
+  const lastStopLabel = lastStop?.title || lastStop?.url || "your last tab";
+  const resumeSummary = topDomain
+    ? `You mainly worked on ${topDomain.label} and last stopped at ${lastStopLabel}.`
+    : DEFAULT_RESUME_SUMMARY;
+  const nextActions = topDomain
+    ? domains
+        .slice(0, 2)
+        .map((domain) => `Continue ${domain.label} tasks`)
+    : ["(placeholder) Capture next actions after analysis."];
 
   return {
     timeline,
@@ -20,9 +43,9 @@ export function computeSummary(
     lastStop: lastStop
       ? { url: lastStop.url, title: lastStop.title, ts: lastStop.ts }
       : undefined,
-    resumeSummary: DEFAULT_RESUME_SUMMARY,
-    nextActions: ["(placeholder) Capture next actions after analysis."],
-    pendingDecisions: ["(placeholder) Capture pending decisions after analysis."],
+    resumeSummary,
+    nextActions,
+    pendingDecisions: [],
   };
 }
 
@@ -70,6 +93,7 @@ function summarizeDomains(timeline: TimelineEvent[]): DomainSummary[] {
     const duration = event.durationSec ?? 0;
     const summary = domainMap.get(domain) ?? {
       domain,
+      label: domainLabel(domain),
       timeSec: 0,
       topUrls: [],
     };
@@ -103,4 +127,8 @@ function safeDomain(url: string): string {
   } catch {
     return "unknown";
   }
+}
+
+function domainLabel(domain: string): string {
+  return DOMAIN_LABELS[domain] ?? domain;
 }

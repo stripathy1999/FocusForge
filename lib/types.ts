@@ -24,6 +24,7 @@ export type TimelineEvent = Event & {
 
 export type DomainSummary = {
   domain: string;
+  label: string;
   timeSec: number;
   topUrls: string[];
 };

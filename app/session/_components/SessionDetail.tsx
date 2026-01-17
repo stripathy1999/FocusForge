@@ -32,6 +32,10 @@ function formatDuration(seconds?: number) {
 }
 
 export function SessionDetail({ session, computedSummary }: SessionDetailProps) {
+  const timeline = computedSummary.timeline.filter(
+    (event) => event.type !== "STOP",
+  );
+
   return (
     <div className="min-h-screen bg-zinc-50 px-6 py-10 text-zinc-900">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
@@ -54,12 +58,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold">Timeline</h2>
               <div className="mt-4 flex flex-col gap-4">
-                {computedSummary.timeline.length === 0 ? (
+                {timeline.length === 0 ? (
                   <p className="text-sm text-zinc-500">
                     No events recorded yet.
                   </p>
                 ) : (
-                  computedSummary.timeline.map((event) => (
+                  timeline.map((event) => (
                     <div
                       key={`${event.ts}-${event.type}`}
                       className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
@@ -104,7 +108,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
                     >
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-semibold">{domain.domain}</span>
+                        <span className="font-semibold">{domain.label}</span>
                         <span className="text-zinc-600">
                           {formatDuration(domain.timeSec)}
                         </span>
