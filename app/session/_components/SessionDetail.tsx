@@ -42,6 +42,132 @@ function formatEventType(type: string) {
   return type;
 }
 
+// Theme-aligned teal/cyan shades, ordered dark → light for visual distinction
+const PIE_COLORS = [
+  "#1a9ba8", // darker teal
+  "#2BB7D0", // primary
+  "#38c2d4",
+  "#4AB5C9", // secondary
+  "#5BC5D9", // light accent
+  "#6ed5e4",
+  "#22a3be",
+  "#7ee0ed", // lightest
+];
+const PIE_BREAK_COLOR = "#8b9ca6"; // slate, theme-adjacent
+
+type PieSegment = { label: string; timeSec: number };
+
+function TimeBreakdownPie({
+  segments,
+  formatDuration,
+}: {
+  segments: PieSegment[];
+  formatDuration: (s?: number) => string;
+}) {
+  const [hovered, setHovered] = useState<{ label: string; pct: number } | null>(null);
+  const total = segments.reduce((s, i) => s + i.timeSec, 0);
+  if (total <= 0) {
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex h-[140px] w-[140px] items-center justify-center rounded-full bg-zinc-100">
+          <span className="text-xs text-zinc-400">No data</span>
+        </div>
+      </div>
+    );
+  }
+
+  const cx = 60;
+  const cy = 60;
+  const R = 52;
+  const r = 34;
+  const outlineWidth = 2; // outline between segments
+  let cumulativeAngle = 0;
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative h-[140px] w-[140px] shrink-0">
+        <svg
+          viewBox="0 0 120 120"
+          className="h-full w-full"
+          role="img"
+          aria-label="Time breakdown by category"
+        >
+          {segments.map((seg, i) => {
+            const fraction = Math.max(0, seg.timeSec / total);
+            const pct = total > 0 ? Math.round((seg.timeSec / total) * 100) : 0;
+            const a1 = cumulativeAngle;
+            const a2 = cumulativeAngle + fraction * 2 * Math.PI;
+            cumulativeAngle = a2;
+            const isBreak = seg.label.toLowerCase().includes("break");
+            const color = isBreak
+              ? PIE_BREAK_COLOR
+              : PIE_COLORS[i % PIE_COLORS.length];
+            const x = (rad: number) => cx + R * Math.cos(rad);
+            const y = (rad: number) => cy + R * Math.sin(rad);
+            const xi = (rad: number) => cx + r * Math.cos(rad);
+            const yi = (rad: number) => cy + r * Math.sin(rad);
+            const large = a2 - a1 >= Math.PI ? 1 : 0;
+            const d =
+              `M ${x(a1)} ${y(a1)}` +
+              ` A ${R} ${R} 0 ${large} 1 ${x(a2)} ${y(a2)}` +
+              ` L ${xi(a2)} ${yi(a2)}` +
+              ` A ${r} ${r} 0 ${large} 0 ${xi(a1)} ${yi(a1)} Z`;
+            return (
+              <path
+                key={`${seg.label}-${i}`}
+                d={d}
+                fill={color}
+                stroke="#e4e4e7"
+                strokeWidth={outlineWidth}
+                strokeLinejoin="round"
+                className="cursor-pointer transition-opacity hover:opacity-90"
+                onMouseEnter={() => setHovered({ label: seg.label, pct })}
+                onMouseLeave={() => setHovered(null)}
+              >
+                <title>{seg.label}: {pct}%</title>
+              </path>
+            );
+          })}
+        </svg>
+        {hovered && (
+          <div
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            aria-hidden
+          >
+            <span className="rounded-md bg-white px-2.5 py-1 text-sm font-medium text-zinc-800 shadow-md ring-1 ring-zinc-200/80">
+              {hovered.label}: {hovered.pct}%
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="w-full space-y-1.5">
+        {segments.map((seg, i) => {
+          const isBreak = seg.label.toLowerCase().includes("break");
+          const color = isBreak
+            ? PIE_BREAK_COLOR
+            : PIE_COLORS[i % PIE_COLORS.length];
+          return (
+            <div
+              key={`${seg.label}-${i}`}
+              className="flex items-center gap-2 text-sm text-zinc-700"
+            >
+              <span
+                className="h-3 w-3 shrink-0 rounded-sm"
+                style={{ backgroundColor: color }}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1 truncate">{seg.label}</span>
+              <span className="shrink-0 text-zinc-500">
+                {formatDuration(seg.timeSec)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function SessionDetail({ session, computedSummary }: SessionDetailProps) {
   const timeline = computedSummary.timeline.filter(
     (event) => event.type !== "STOP",
@@ -335,7 +461,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
           <aside className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 
-                className="text-lg font-semibold"
+                className="text-2xl font-semibold"
                 style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}
               >
                 Resume Panel
@@ -349,44 +475,37 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </span>
               )}
             </div>
-            <div className="mt-4 space-y-6 text-sm text-zinc-700">
+            <div className="mt-4 space-y-6 text-base text-zinc-700">
                 {session.status === "auto_ended" && (
-                  <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+                  <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
                     This session auto-ended after a long period of inactivity.
                   </div>
                 )}
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">
+                  <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
                     Session Intent
                   </p>
                   {computedSummary.intent_tags.length > 0 ? (
                     <>
-                      <p className="mt-2 text-sm text-zinc-800">
-                        {computedSummary.intent_raw}
-                      </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {computedSummary.intent_tags.map((tag) => (
                           <span
                             key={tag}
-                            className="rounded-full bg-zinc-100 px-2 py-1 text-[11px] text-zinc-700"
+                            className="rounded-full bg-zinc-100 px-2 py-1 text-xs text-zinc-700"
                           >
                             {tag}
                           </span>
                         ))}
                       </div>
-                      <p className="mt-2 text-xs text-zinc-500">
-                        You were working across:{" "}
-                        {computedSummary.intent_tags.join(", ")}.
-                      </p>
                     </>
                   ) : (
-                    <p className="mt-2 text-sm" style={{ color: '#2BB7D0' }}>No intent set.</p>
+                    <p className="mt-2 text-base text-zinc-600">No intent set.</p>
                   )}
                 </div>
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
-                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
+                  className="rounded-lg px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60"
                   style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#2BB7D0', borderColor: '#2BB7D0' }}
                   onClick={() =>
                     computedSummary.resumeUrls.length
@@ -404,7 +523,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </button>
                 <button
                   type="button"
-                  className="text-left text-xs underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
+                  className="text-left text-sm underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
                   style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4AB5C9' }}
                   onClick={() =>
                     computedSummary.lastStop?.url
@@ -416,20 +535,20 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   Open last stop only
                 </button>
               </div>
-              <p className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+              <p className="rounded-lg bg-zinc-50 px-3 py-2 text-base text-zinc-700">
                 {computedSummary.emotionalSummary}
               </p>
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
                   Resume Summary
                 </p>
-                <p className="mt-2">{computedSummary.resumeSummary}</p>
+                <p className="mt-2 text-base">{computedSummary.resumeSummary}</p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
                   Quick Actions
                 </p>
-                <div className="mt-2 flex flex-col gap-2 text-xs">
+                <div className="mt-2 flex flex-col gap-2 text-sm">
                   <div className="text-zinc-700">
                     Resume:{" "}
                     <button
@@ -463,10 +582,10 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </button>
                   </div>
                   <div className="rounded-md border border-zinc-200 px-3 py-2 text-zinc-700">
-                    <div className="text-xs font-medium font-jura">
+                    <div className="text-sm font-medium font-jura">
                       Review top 3 pages visited
                     </div>
-                    <div className="mt-2 space-y-1 text-xs text-zinc-600">
+                    <div className="mt-2 space-y-1 text-sm text-zinc-600">
                       {(computedSummary.topPages ?? []).length === 0 ? (
                         <p>No pages yet.</p>
                       ) : (
@@ -488,10 +607,24 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </div>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
                   Time Breakdown
                 </p>
-                <div className="mt-2 space-y-1 text-xs text-zinc-600">
+                <TimeBreakdownPie
+                  formatDuration={formatDuration}
+                  segments={[
+                    ...computedSummary.timeBreakdown,
+                    ...(computedSummary.focus.breakTimeSec > 0
+                      ? [
+                          {
+                            label: "Break (not counted)",
+                            timeSec: computedSummary.focus.breakTimeSec,
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+                <div className="mt-2 space-y-1 text-sm text-zinc-600">
                   <div className="flex items-center justify-between">
                     <span>Active time</span>
                     <span>{formatDuration(computedSummary.focus.totalTimeSec)}</span>
@@ -504,49 +637,94 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       </span>
                     </div>
                   )}
-                  {computedSummary.timeBreakdown.length === 0 ? (
-                    <p>No time data yet.</p>
-                  ) : (
-                    computedSummary.timeBreakdown.map((item) => (
-                      <div
-                        key={item.label}
-                        className="flex items-center justify-between"
-                      >
-                        <span>{item.label}</span>
-                        <span>{formatDuration(item.timeSec)}</span>
-                      </div>
-                    ))
-                  )}
                 </div>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
+                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#2BB7D0' }}>
                   Intent Alignment
                 </p>
-                <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs text-zinc-600">
+                <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-600">
                   {computedSummary.focus.intentMissing ? (
-                    <div className="text-sm font-semibold font-jura text-zinc-900">
+                    <div className="text-base font-medium text-zinc-600" style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
                       Time split across different activities
                     </div>
                   ) : computedSummary.focus.tooShort ? (
-                    <div className="text-sm font-semibold font-jura text-zinc-900">
+                    <div className="text-base font-semibold font-jura text-zinc-900">
                       Session too short to assess focus
                     </div>
                   ) : (
-                    <div className="text-2xl font-semibold font-jura text-zinc-900">
+                    <div className="text-3xl font-semibold font-jura text-zinc-900">
                       {computedSummary.focus.displayFocusPct}% Aligned
                     </div>
                   )}
-                  <div className="mt-1">
-                    Aligned{" "}
-                    {formatDuration(computedSummary.focus.alignedTimeSec)} •
-                    Off-intent{" "}
-                    {formatDuration(computedSummary.focus.offIntentTimeSec)} •
-                    Neutral{" "}
-                    {formatDuration(computedSummary.focus.neutralTimeSec)}
-                  </div>
+                  {(() => {
+                    const a = computedSummary.focus.alignedTimeSec;
+                    const o = computedSummary.focus.offIntentTimeSec;
+                    const n = computedSummary.focus.neutralTimeSec;
+                    const total = a + o + n;
+                    const pctA = total > 0 ? (a / total) * 100 : 0;
+                    const pctO = total > 0 ? (o / total) * 100 : 0;
+                    const pctN = total > 0 ? (n / total) * 100 : 100;
+                    return (
+                      <div className="mt-3 space-y-2.5">
+                        <div
+                          className="flex min-h-[12px] w-full overflow-hidden rounded-full bg-zinc-200"
+                          role="img"
+                          aria-label={`Aligned ${formatDuration(a)}, Off-intent ${formatDuration(o)}, Neutral ${formatDuration(n)}`}
+                        >
+                          {total > 0 ? (
+                            <>
+                              <div
+                                className="h-full shrink-0"
+                                style={{
+                                  flex: `0 0 ${pctA}%`,
+                                  backgroundColor: "#2BB7D0",
+                                  minWidth: a > 0 ? "2px" : undefined,
+                                }}
+                                title={`Aligned: ${formatDuration(a)}`}
+                              />
+                              <div
+                                className="h-full shrink-0"
+                                style={{
+                                  flex: `0 0 ${pctO}%`,
+                                  backgroundColor: "#22a3be",
+                                  minWidth: o > 0 ? "2px" : undefined,
+                                }}
+                                title={`Off-intent: ${formatDuration(o)}`}
+                              />
+                              <div
+                                className="h-full shrink-0"
+                                style={{
+                                  flex: `0 0 ${pctN}%`,
+                                  backgroundColor: "#94a3b8",
+                                  minWidth: n > 0 ? "2px" : undefined,
+                                }}
+                                title={`Neutral: ${formatDuration(n)}`}
+                              />
+                            </>
+                          ) : (
+                            <div className="h-full min-h-[12px] w-full flex-1" style={{ backgroundColor: "#7ee0ed" }} />
+                          )}
+                        </div>
+                        <div className="flex flex-nowrap gap-x-3 text-xs text-zinc-600">
+                          <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                            <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#2BB7D0" }} />
+                            Aligned {formatDuration(a)}
+                          </span>
+                          <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                            <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#f59e0b" }} />
+                            Off-intent {formatDuration(o)}
+                          </span>
+                          <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                            <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#94a3b8" }} />
+                            Neutral {formatDuration(n)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {computedSummary.focus.breakTimeSec > 0 && (
-                    <div className="mt-1 text-[11px] text-zinc-500">
+                    <div className="mt-1 text-xs text-zinc-500">
                       Breaks {formatDuration(computedSummary.focus.breakTimeSec)}{" "}
                       — not counted
                     </div>
@@ -558,7 +736,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       computedSummary.focus.topDriftSources.map((source) => (
                         <span
                           key={source.domain}
-                          className="rounded-full bg-white px-2 py-1 text-[11px] text-zinc-700 shadow-sm"
+                          className="rounded-full bg-white px-2 py-1 text-xs text-zinc-700 shadow-sm"
                         >
                           {prettyDomain(source.domain)} (
                           {formatDuration(source.timeSec)})
@@ -566,23 +744,23 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       ))
                     )}
                   </div>
-                  <p className="mt-3 text-[11px] text-zinc-500">
+                  <p className="mt-3 text-xs text-zinc-500">
                     No guilt, this just helps you snap back faster.
                   </p>
                 </div>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
+                <p className="text-sm uppercase tracking-wide text-zinc-500">
                   Pending Decisions
                 </p>
-                <ul className="mt-2 list-disc pl-5">
+                <ul className="mt-2 list-disc pl-5 text-base">
                   {computedSummary.pendingDecisions.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
+                <p className="text-sm uppercase tracking-wide text-zinc-500">
                   Last Stop
                 </p>
                 {computedSummary.lastStop ? (
@@ -590,17 +768,17 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     href={computedSummary.lastStop.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-2 inline-block underline-offset-4 hover:underline"
+                    className="mt-2 inline-block text-base underline-offset-4 hover:underline"
                     style={{ color: '#5BC5D9' }}
                   >
                     {computedSummary.lastStop.title ||
                       computedSummary.lastStop.url}
                   </a>
                 ) : (
-                  <p className="mt-2 text-zinc-500">No last stop recorded.</p>
+                  <p className="mt-2 text-base text-zinc-500">No last stop recorded.</p>
                 )}
               </div>
-              <div className="pt-4 text-xs text-zinc-500">
+              <div className="pt-4 text-sm text-zinc-500">
                 <Link href="/session/demo" className="underline" style={{ color: '#4AB5C9' }}>
                   View demo session →
                 </Link>
