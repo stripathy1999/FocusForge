@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "FocusForge Tracker",
+  "version": "0.1.0",
+  "description": "Track active tab sessions for FocusForge.",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://YOUR_DEPLOYED_DOMAIN/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
