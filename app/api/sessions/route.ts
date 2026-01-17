@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
-
+import { corsHeaders, corsJson } from "@/app/api/cors";
 import { computeSummary } from "@/lib/grouping";
 import { getEvents, listSessions } from "@/lib/store";
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
 
 type SessionListItem = {
   id: string;
@@ -37,5 +40,5 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ sessions: payload });
+  return corsJson({ sessions: payload });
 }

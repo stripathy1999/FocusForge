@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
-
+import { corsHeaders, corsJson } from "@/app/api/cors";
 import { runGeminiAnalysis } from "@/lib/analysis";
 import { addEvent, updateSessionStatus } from "@/lib/store";
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -11,13 +14,13 @@ export async function POST(request: Request) {
   };
 
   if (!body.sessionId) {
-    return NextResponse.json({ error: "sessionId is required." }, { status: 400 });
+    return corsJson({ error: "sessionId is required." }, { status: 400 });
   }
 
   const endedAt = Date.now();
   const session = updateSessionStatus(body.sessionId, "ended", endedAt);
   if (!session) {
-    return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    return corsJson({ error: "Session not found." }, { status: 404 });
   }
 
   addEvent({
@@ -36,5 +39,5 @@ export async function POST(request: Request) {
     console.warn("[Gemini] Analysis failed for session", body.sessionId);
   }
 
-  return NextResponse.json({ ok: true });
+  return corsJson({ ok: true });
 }

@@ -1,6 +1,9 @@
-import { NextResponse } from "next/server";
-
+import { corsHeaders, corsJson } from "@/app/api/cors";
 import { addEvent, updateSessionStatus } from "@/lib/store";
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -10,12 +13,12 @@ export async function POST(request: Request) {
   };
 
   if (!body.sessionId) {
-    return NextResponse.json({ error: "sessionId is required." }, { status: 400 });
+    return corsJson({ error: "sessionId is required." }, { status: 400 });
   }
 
   const session = updateSessionStatus(body.sessionId, "running");
   if (!session) {
-    return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    return corsJson({ error: "Session not found." }, { status: 404 });
   }
 
   addEvent({
@@ -26,5 +29,5 @@ export async function POST(request: Request) {
     title: body.title ?? "",
   });
 
-  return NextResponse.json({ ok: true });
+  return corsJson({ ok: true });
 }

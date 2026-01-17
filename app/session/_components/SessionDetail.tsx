@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { classifyWorkspace } from "@/lib/classify";
 import { ComputedSummary, Session } from "@/lib/types";
@@ -44,6 +44,33 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const keyTimeline = showFullTimeline
     ? timeline
     : buildKeyTimeline(timeline, computedSummary.lastStop?.ts);
+  const collapsedTimeline = showFullTimeline
+    ? []
+    : buildCollapsedTimeline(keyTimeline);
+
+  const heuristic = buildHeuristicSummary(computedSummary);
+
+  useEffect(() => {
+    const topWorkspaces = computedSummary.domains
+      .slice(0, 2)
+      .map((domain) => domain.label);
+    const entry = {
+      id: session.id,
+      status: session.status,
+      started_at: session.started_at,
+      ended_at: session.ended_at,
+      durationSec: computedSummary.focus.totalTimeSec,
+      topWorkspaces,
+    };
+
+    const raw = localStorage.getItem("focusforge_recent_sessions");
+    const existing = raw ? (JSON.parse(raw) as typeof entry[]) : [];
+    const next = [entry, ...existing.filter((item) => item.id !== entry.id)];
+    localStorage.setItem(
+      "focusforge_recent_sessions",
+      JSON.stringify(next.slice(0, 3)),
+    );
+  }, [computedSummary, session]);
 
   const handleReopen = (urls: string[]) => {
     window.postMessage({ type: "FOCUSFORGE_REOPEN", urls }, "*");
@@ -91,7 +118,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   <p className="text-sm text-zinc-500">
                     No events recorded yet.
                   </p>
-                ) : (
+                ) : showFullTimeline ? (
                   keyTimeline.map((event) => (
                     <div
                       key={`${event.ts}-${event.type}`}
@@ -136,6 +163,61 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           {event.url && (
                             <div className="mt-1 truncate text-xs text-zinc-400">
                               {event.url}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  collapsedTimeline.map((item) => (
+                    <div
+                      key={item.key}
+                      className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
+                    >
+                      {item.type === "break" ? (
+                        <div className="text-xs text-zinc-500">
+                          <div className="font-medium text-zinc-700">
+                            Break detected ({formatDuration(item.durationSec)}) —
+                            not counted
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600">
+                            <span>{item.label}</span>
+                            <span>{formatDate(item.ts)}</span>
+                            <span>
+                              {item.visits > 1
+                                ? `${item.visits} visits · ${formatDuration(
+                                    item.durationSec,
+                                  )}`
+                                : `Duration: ${formatDuration(item.durationSec)}`}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-sm font-medium text-zinc-900">
+                            {item.title || "Untitled tab"}
+                          </div>
+                          <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+                            <span>{item.domain ?? "unknown"}</span>
+                            {item.url ? (
+                              <button
+                                type="button"
+                                className="text-blue-600 underline-offset-4 hover:underline"
+                                title={item.url}
+                                onClick={() =>
+                                  navigator.clipboard.writeText(item.url)
+                                }
+                              >
+                                Copy URL
+                              </button>
+                            ) : (
+                              <span>No URL</span>
+                            )}
+                          </div>
+                          {item.url && (
+                            <div className="mt-1 truncate text-xs text-zinc-400">
+                              {item.url}
                             </div>
                           )}
                         </>
@@ -332,6 +414,43 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               <p className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
                 {computedSummary.emotionalSummary}
               </p>
+              {heuristic && (
+                <div className="rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-700">
+                  <p className="text-xs uppercase tracking-wide text-zinc-500">
+                    Focus Recap
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    <p>
+                      <span className="font-semibold">You were doing:</span>{" "}
+                      {heuristic.doing}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Where you left off:</span>{" "}
+                      {heuristic.leftOff}
+                    </p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {heuristic.actions.map((action) => (
+                      <button
+                        key={action.label}
+                        type="button"
+                        className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-100"
+                        onClick={() => handleReopen(action.urls)}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 text-xs text-zinc-600">
+                    Next actions:
+                    <ul className="mt-2 list-disc pl-5">
+                      {heuristic.nextActions.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
               <div>
                 <p className="text-xs uppercase tracking-wide text-zinc-500">
                   Resume Summary
@@ -440,7 +559,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </div>
                   ) : computedSummary.focus.tooShort ? (
                     <div className="text-sm font-semibold text-zinc-900">
-                      Session too short to assess focus
+                      Not enough data yet — keep going for focus insights.
                     </div>
                   ) : (
                     <div className="text-2xl font-semibold text-zinc-900">
@@ -567,4 +686,131 @@ function prettyDomain(domain: string) {
   };
 
   return map[domain] ?? domain;
+}
+
+type CollapsedItem =
+  | {
+      type: "break";
+      key: string;
+      durationSec?: number;
+    }
+  | {
+      type: "group";
+      key: string;
+      ts: number;
+      label: string;
+      title: string;
+      url: string;
+      domain?: string;
+      visits: number;
+      durationSec: number;
+    };
+
+function buildCollapsedTimeline(timeline: ComputedSummary["timeline"]): CollapsedItem[] {
+  const items: CollapsedItem[] = [];
+  const grouped = new Map<string, CollapsedItem>();
+
+  for (const event of timeline) {
+    if (event.type === "BREAK") {
+      items.push({
+        type: "break",
+        key: `break-${event.ts}`,
+        durationSec: event.durationSec,
+      });
+      continue;
+    }
+    const url = event.url ?? "";
+    if (!url) {
+      continue;
+    }
+    const key = `${event.domain ?? "unknown"}|${url}`;
+    const existing = grouped.get(key);
+    if (existing && existing.type === "group") {
+      existing.visits += 1;
+      existing.durationSec += event.durationSec ?? 0;
+      continue;
+    }
+    const label = event.domain ?? "Tab";
+    const entry: CollapsedItem = {
+      type: "group",
+      key,
+      ts: event.ts,
+      label,
+      title: event.title || "Untitled tab",
+      url,
+      domain: event.domain,
+      visits: 1,
+      durationSec: event.durationSec ?? 0,
+    };
+    grouped.set(key, entry);
+    items.push(entry);
+  }
+
+  return items;
+}
+
+function buildHeuristicSummary(summary: ComputedSummary) {
+  const lastStop = summary.lastStop;
+  if (!lastStop?.url) {
+    return null;
+  }
+
+  const leet = extractLeetCodeTitle(lastStop.url);
+  const doing = leet
+    ? `LeetCode “${leet}”`
+    : summary.domains[0]?.label
+      ? `${summary.domains[0].label}`
+      : "your recent task";
+  const leftOff = lastStop.title || lastStop.url;
+
+  const actions: { label: string; urls: string[] }[] = [];
+  const nextActions: string[] = [];
+
+  if (leet) {
+    actions.push({ label: "Open last problem", urls: [lastStop.url] });
+    nextActions.push("Review sliding window approach");
+    nextActions.push("Write final solution in Java");
+  }
+
+  const docPage = summary.topPages.find((page) =>
+    page.domain.includes("docs.google.com"),
+  );
+  if (docPage) {
+    const label = docPage.title || "Open doc";
+    actions.push({ label: "Open Opennote doc", urls: [docPage.url] });
+    nextActions.push(`Add notes to ${label}`);
+  }
+
+  const slidesPage = summary.topPages.find((page) =>
+    page.url.includes("/presentation"),
+  );
+  if (slidesPage) {
+    actions.push({ label: "Open hackathon slides", urls: [slidesPage.url] });
+  }
+
+  if (actions.length === 0) {
+    actions.push({ label: "Open last tab", urls: [lastStop.url] });
+  }
+  if (nextActions.length === 0) {
+    nextActions.push("Review your recent tabs");
+    nextActions.push("Continue where you left off");
+  }
+
+  return {
+    doing,
+    leftOff,
+    actions,
+    nextActions,
+  };
+}
+
+function extractLeetCodeTitle(url: string): string | null {
+  const match = url.match(/leetcode\.com\/problems\/([^/]+)/i);
+  if (!match) {
+    return null;
+  }
+  return match[1]
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }

@@ -1,16 +1,19 @@
-import { NextResponse } from "next/server";
-
+import { corsHeaders, corsJson } from "@/app/api/cors";
 import { addEvent, getEvents, getSession, updateSessionStatus } from "@/lib/store";
 import { Event } from "@/lib/types";
 
 const IDLE_THRESHOLD_MS = 10 * 60 * 1000;
 const HARD_BREAK_THRESHOLD_MS = 2 * 60 * 60 * 1000;
 
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
+
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<Event>;
 
   if (!body.sessionId || !body.type || !body.ts) {
-    return NextResponse.json(
+    return corsJson(
       { error: "sessionId, type, and ts are required." },
       { status: 400 },
     );
@@ -42,7 +45,7 @@ export async function POST(request: Request) {
         url: "",
         title: "Auto-ended due to inactivity",
       });
-      return NextResponse.json(
+      return corsJson(
         { error: "Session auto-ended due to inactivity.", autoEnded: true },
         { status: 409 },
       );
@@ -59,5 +62,5 @@ export async function POST(request: Request) {
   }
 
   addEvent(event);
-  return NextResponse.json({ ok: true });
+  return corsJson({ ok: true });
 }

@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
-
+import { corsHeaders, corsJson } from "@/app/api/cors";
 import { computeSummary } from "@/lib/grouping";
 import { getAnalysis, getEvents, getSession } from "@/lib/store";
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
 
 export async function GET(
   _request: Request,
@@ -11,12 +14,12 @@ export async function GET(
   const session = getSession(id);
 
   if (!session) {
-    return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    return corsJson({ error: "Session not found." }, { status: 404 });
   }
 
   const events = getEvents(id);
   const analysis = getAnalysis(id);
   const computedSummary = computeSummary(session, events, analysis);
 
-  return NextResponse.json({ session, events, computedSummary });
+  return corsJson({ session, events, computedSummary });
 }

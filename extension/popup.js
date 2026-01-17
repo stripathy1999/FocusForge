@@ -1,12 +1,10 @@
-const DEFAULT_BASE_URL = "http://localhost:3000";
+const DEFAULT_BASE_URL = "https://focusforge-app-seven.vercel.app";
 
 const statusText = document.getElementById("statusText");
 const startBtn = document.getElementById("startBtn");
 const pauseBtn = document.getElementById("pauseBtn");
 const stopBtn = document.getElementById("stopBtn");
 const sessionIdEl = document.getElementById("sessionId");
-const baseUrlInput = document.getElementById("baseUrlInput");
-const saveBaseUrlBtn = document.getElementById("saveBaseUrlBtn");
 const intentInput = document.getElementById("intentInput");
 const saveIntentBtn = document.getElementById("saveIntentBtn");
 const resumePrompt = document.getElementById("resumePrompt");
@@ -18,7 +16,6 @@ async function getState() {
     "sessionId",
     "status",
     "paused",
-    "baseUrl",
     "autoEndedSessionId",
     "intent",
   ]);
@@ -29,8 +26,7 @@ async function setState(update) {
 }
 
 async function apiPost(path, body) {
-  const { baseUrl } = await getState();
-  const url = `${baseUrl || DEFAULT_BASE_URL}${path}`;
+  const url = `${DEFAULT_BASE_URL}${path}`;
   return fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -52,7 +48,6 @@ function render(state) {
   statusText.textContent = `Status: ${statusLabel}`;
   pauseBtn.textContent = paused ? "Resume" : "Pause";
   sessionIdEl.textContent = state.sessionId || "—";
-  baseUrlInput.value = state.baseUrl || DEFAULT_BASE_URL;
   if (intentInput && document.activeElement !== intentInput) {
     intentInput.value = state.intent || "";
   }
@@ -200,11 +195,6 @@ async function handleContinueLast() {
   render(await getState());
 }
 
-async function handleSaveBaseUrl() {
-  const value = baseUrlInput.value.trim() || DEFAULT_BASE_URL;
-  await setState({ baseUrl: value });
-  render(await getState());
-}
 
 async function handleSaveIntent() {
   const intent = intentInput?.value?.trim() || "";
@@ -231,7 +221,6 @@ startBtn.addEventListener("click", handleStart);
 intentInput?.addEventListener("input", async () => render(await getState()));
 pauseBtn.addEventListener("click", handlePauseToggle);
 stopBtn.addEventListener("click", handleStop);
-saveBaseUrlBtn.addEventListener("click", handleSaveBaseUrl);
 startFreshBtn?.addEventListener("click", handleStartFresh);
 continueLastBtn?.addEventListener("click", handleContinueLast);
 saveIntentBtn?.addEventListener("click", handleSaveIntent);

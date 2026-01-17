@@ -1,6 +1,9 @@
-import { NextResponse } from "next/server";
-
+import { corsHeaders, corsJson } from "@/app/api/cors";
 import { createSession } from "@/lib/store";
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
 
 export async function POST(request: Request) {
   let intentRaw: string | undefined;
@@ -11,5 +14,5 @@ export async function POST(request: Request) {
     intentRaw = undefined;
   }
   const session = createSession(intentRaw);
-  return NextResponse.json({ sessionId: session.id });
+  return corsJson({ sessionId: session.id });
 }

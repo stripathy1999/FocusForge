@@ -1,61 +1,8 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 
-type SessionListItem = {
-  id: string;
-  status: string;
-  started_at: number;
-  ended_at?: number;
-  durationSec: number;
-  topWorkspaces: string[];
-};
+import { RecentSessions } from "@/app/RecentSessions";
 
-type SessionsResponse = {
-  sessions: SessionListItem[];
-};
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
-function formatDate(ts?: number) {
-  if (!ts) {
-    return "—";
-  }
-  return dateFormatter.format(new Date(ts));
-}
-
-function formatDuration(seconds?: number) {
-  if (!seconds) {
-    return "—";
-  }
-  if (seconds < 60) {
-    return `${seconds}s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return `${minutes}m ${remainder}s`;
-}
-
-async function getSessions(): Promise<SessionListItem[]> {
-  const headerList = await headers();
-  const host = headerList.get("host") ?? "localhost:3000";
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  const response = await fetch(`${protocol}://${host}/api/sessions`, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    return [];
-  }
-
-  const data = (await response.json()) as SessionsResponse;
-  return data.sessions ?? [];
-}
-
-export default async function Home() {
-  const sessions = await getSessions();
+export default function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-50 px-6 py-12 text-zinc-900">
@@ -90,41 +37,7 @@ export default async function Home() {
 
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Recent Sessions</h2>
-          <div className="mt-4 flex flex-col gap-3 text-sm text-zinc-600">
-            {sessions.length === 0 ? (
-              <p>No sessions yet. Start one from the extension.</p>
-            ) : (
-              sessions.slice(0, 5).map((session) => (
-                <div
-                  key={session.id}
-                  className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <div className="font-medium text-zinc-900">
-                      {session.id}
-                    </div>
-                    <div className="mt-1 text-xs text-zinc-500">
-                      Status: {session.status} · Started{" "}
-                      {formatDate(session.started_at)}
-                    </div>
-                    <div className="mt-2 text-xs text-zinc-500">
-                      Duration: {formatDuration(session.durationSec)} · Top
-                      workspaces:{" "}
-                      {session.topWorkspaces.length
-                        ? session.topWorkspaces.join(", ")
-                        : "—"}
-                    </div>
-                  </div>
-                  <Link
-                    href={`/session/${session.id}`}
-                    className="text-blue-600 underline"
-                  >
-                    Open
-                  </Link>
-                </div>
-              ))
-            )}
-          </div>
+          <RecentSessions />
         </section>
       </div>
     </div>
