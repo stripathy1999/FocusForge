@@ -7,7 +7,15 @@ export default function Home() {
   return (
     <div
       className="min-h-screen px-6 py-12 text-zinc-900"
-      style={{ backgroundColor: "#BDE8F5" }}
+      style={{
+        backgroundColor: "#BDE8F5",
+        backgroundImage: `
+          radial-gradient(circle, rgba(50, 87, 142, 0.2) 1.5px, transparent 1.5px),
+          repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px),
+          repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0, 0, 0, 0.02) 2px, rgba(0, 0, 0, 0.02) 4px)
+        `,
+        backgroundSize: "28px 28px, 3px 3px, 3px 3px",
+      }}
     >
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
