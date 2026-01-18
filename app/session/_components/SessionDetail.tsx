@@ -339,7 +339,18 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
 
 
   return (
-    <div className="min-h-screen px-6 py-10 text-zinc-900" style={{ backgroundColor: '#BDE8F5' }}>
+    <div 
+      className="min-h-screen px-6 py-10 text-zinc-900" 
+      style={{ 
+        backgroundColor: '#BDE8F5',
+        backgroundImage: `
+          radial-gradient(circle, rgba(50, 87, 142, 0.2) 1.5px, transparent 1.5px),
+          repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px),
+          repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0, 0, 0, 0.02) 2px, rgba(0, 0, 0, 0.02) 4px)
+        `,
+        backgroundSize: "28px 28px, 3px 3px, 3px 3px",
+      }}
+    >
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <header className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-4">
@@ -575,6 +586,30 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       ))}
                     </div>
                   )}
+                  <div className="mt-4">
+                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                      Review top 3 pages visited
+                    </p>
+                    <ul className="mt-2 list-disc pl-5 text-sm">
+                      {(computedSummary.topPages ?? []).length === 0 ? (
+                        <li className="text-zinc-600">No pages yet.</li>
+                      ) : (
+                        (computedSummary.topPages ?? []).map((page) => (
+                          <li key={page.url}>
+                            <button
+                              type="button"
+                              className="cursor-pointer truncate text-left underline-offset-4 hover:underline"
+                              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                              title={page.url}
+                              onClick={() => handleReopen([page.url])}
+                            >
+                              {page.title}
+                            </button>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
                   <div className="mt-3">
                     <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
                       Next actions:
@@ -585,29 +620,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
-                      Review top 3 pages visited
-                    </p>
-                    <div className="space-y-1 text-sm">
-                      {(computedSummary.topPages ?? []).length === 0 ? (
-                        <p className="text-zinc-600">No pages yet.</p>
-                      ) : (
-                        (computedSummary.topPages ?? []).map((page) => (
-                          <button
-                            key={page.url}
-                            type="button"
-                            className="cursor-pointer block w-full truncate text-left underline-offset-4 hover:underline"
-                            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                            title={page.url}
-                            onClick={() => handleReopen([page.url])}
-                          >
-                            {page.title}
-                          </button>
-                        ))
-                      )}
                     </div>
                   </div>
                 </div>
