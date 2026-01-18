@@ -18,12 +18,12 @@ export async function POST(request: Request) {
   }
 
   const endedAt = Date.now();
-  const session = updateSessionStatus(body.sessionId, "ended", endedAt);
+  const session = await updateSessionStatus(body.sessionId, "ended", endedAt);
   if (!session) {
     return corsJson({ error: "Session not found." }, { status: 404 });
   }
 
-  addEvent({
+  await addEvent({
     sessionId: body.sessionId,
     ts: endedAt,
     type: "STOP",

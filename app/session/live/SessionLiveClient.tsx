@@ -21,7 +21,13 @@ export function SessionLiveClient() {
         />
         <button
           type="button"
-          onClick={() => sessionId && router.push(`/session/${sessionId}`)}
+          onClick={() => {
+            if (!sessionId) return;
+            const cleaned = normalizeSessionId(sessionId);
+            if (cleaned) {
+              router.push(`/session/${cleaned}`);
+            }
+          }}
           className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90"
           style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#32578E', borderColor: '#32578E' }}
         >
@@ -30,4 +36,20 @@ export function SessionLiveClient() {
       </div>
     </div>
   );
+}
+
+function normalizeSessionId(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("http")) {
+    try {
+      const url = new URL(trimmed);
+      const parts = url.pathname.split("/").filter(Boolean);
+      if (!parts.length) return null;
+      return parts[parts.length - 1];
+    } catch {
+      return null;
+    }
+  }
+  return trimmed;
 }

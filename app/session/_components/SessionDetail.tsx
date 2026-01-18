@@ -79,6 +79,22 @@ function shortenUrl(url: string): string {
   }
 }
 
+function buildSessionTitle(
+  session: Session,
+  computedSummary: ComputedSummary,
+): string {
+  const startLabel = formatDate(session.started_at);
+  const intentTags = (computedSummary.intent_tags ?? []).filter(Boolean);
+  const workspaceLabels = computedSummary.domains
+    .map((domain) => domain.label)
+    .filter(Boolean);
+  const focusLabels = (intentTags.length > 0 ? intentTags : workspaceLabels)
+    .slice(0, 2)
+    .join(" + ");
+  const baseTitle = focusLabels ? `${focusLabels} Session` : "Focus Session";
+  return `${baseTitle} — ${startLabel}`;
+}
+
 // Theme-aligned blue shades, ordered dark → light for visual distinction
 const PIE_COLORS = [
   "#223758", // primary dark
@@ -233,6 +249,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const [journalUrl, setJournalUrl] = useState<string | null>(null);
   const [practiceUrl, setPracticeUrl] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const sessionTitle = buildSessionTitle(session, computedSummary);
+  const shortSessionId = session.id.slice(0, 8);
 
   useEffect(() => {
     const topWorkspaces = computedSummary.domains
@@ -364,8 +382,29 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 className="text-2xl font-semibold"
                 style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
               >
-                Session {session.id}
+                {sessionTitle}
               </h1>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                <span>Session ID:</span>
+                <code
+                  className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-700"
+                  title={session.id}
+                >
+                  {shortSessionId}
+                </code>
+                <button
+                  type="button"
+                  className="text-xs text-blue-600 hover:underline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(session.id);
+                    setCopiedItem(`session-${session.id}`);
+                    setTimeout(() => setCopiedItem(null), 1500);
+                  }}
+                  title="Copy session id"
+                >
+                  {copiedItem === `session-${session.id}` ? "Copied" : "Copy"}
+                </button>
+              </div>
               <div className="flex flex-wrap gap-3 text-sm text-zinc-600">
                 <span>Status: {session.status}</span>
                 <span>Started: {formatDate(session.started_at)}</span>

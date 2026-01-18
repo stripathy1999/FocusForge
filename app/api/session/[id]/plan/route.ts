@@ -10,13 +10,13 @@ export async function GET(
     const { id } = await context.params
 
     // Get session data from local store
-    const session = getSession(id)
+    const session = await getSession(id)
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    const events = getEvents(id)
-    const analysis = getAnalysis(id)
+    const events = await getEvents(id)
+    const analysis = await getAnalysis(id)
     const computedSummary = computeSummary(session, events, analysis)
 
     // Convert to planning agent format
