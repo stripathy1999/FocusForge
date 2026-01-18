@@ -211,6 +211,11 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   );
   const [showFullTimeline, setShowFullTimeline] = useState(false);
   const [activeTab, setActiveTab] = useState<"workspaces" | "timeline" | "tasks">("workspaces");
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [taskSuggestions, setTaskSuggestions] = useState<string[]>([]);
+  const [taskInsights, setTaskInsights] = useState<string[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
   const keyTimeline = showFullTimeline
     ? timeline
     : buildKeyTimeline(timeline, computedSummary.lastStop?.ts);
@@ -219,6 +224,13 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
     : buildCollapsedTimeline(keyTimeline);
 
   const heuristic = buildHeuristicSummary(computedSummary);
+  
+  // Opennote export state
+  const [exportingJournal, setExportingJournal] = useState(false);
+  const [exportingPractice, setExportingPractice] = useState(false);
+  const [journalUrl, setJournalUrl] = useState<string | null>(null);
+  const [practiceUrl, setPracticeUrl] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     const topWorkspaces = computedSummary.domains
@@ -242,9 +254,87 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
     );
   }, [computedSummary, session]);
 
+  // Load tasks when tasks tab is opened
+  useEffect(() => {
+    if (activeTab === 'tasks' && tasks.length === 0 && !loadingTasks) {
+      loadTasks();
+    }
+  }, [activeTab]);
+
+  const loadTasks = async () => {
+    setLoadingTasks(true);
+    try {
+      const response = await fetch(`/api/session/${session.id}/plan`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.taskPlan) {
+          // Sort tasks by taskOrder if available
+          const orderedTasks = data.taskPlan.taskOrder 
+            ? data.taskPlan.taskOrder.map((taskId: string) => 
+                data.taskPlan.prioritizedTasks.find((t: any) => t.id === taskId)
+              ).filter(Boolean)
+            : data.taskPlan.prioritizedTasks || [];
+          
+          setTasks(orderedTasks);
+          setTaskSuggestions(data.taskPlan.suggestions || []);
+          setTaskInsights(data.taskPlan.insights || []);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
   const handleReopen = (urls: string[]) => {
     window.postMessage({ type: "FOCUSFORGE_REOPEN", urls }, "*");
     urls.forEach((url) => window.open(url, "_blank", "noopener,noreferrer"));
+  };
+
+  const handleExportJournal = async () => {
+    setExportingJournal(true);
+    setExportError(null);
+    try {
+      const response = await fetch('/api/opennote/journal/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id }),
+      });
+      const data = await response.json();
+      if (response.ok && data.ok) {
+        setJournalUrl(data.journalUrl || `https://opennote.com/journal/${data.journalId}`);
+      } else {
+        setExportError(data.error || 'Failed to export journal');
+      }
+    } catch (error: any) {
+      setExportError(error.message || 'Failed to export journal');
+    } finally {
+      setExportingJournal(false);
+    }
+  };
+
+  const handleExportPractice = async () => {
+    setExportingPractice(true);
+    setExportError(null);
+    try {
+      const response = await fetch('/api/opennote/practice/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id }),
+      });
+      const data = await response.json();
+      if (response.ok && data.ok) {
+        // Practice set is being generated, show success message
+        setPracticeUrl('pending');
+      } else {
+        setExportError(data.error || 'Failed to create practice set');
+      }
+    } catch (error: any) {
+      setExportError(error.message || 'Failed to create practice set');
+    } finally {
+      setExportingPractice(false);
+    }
   };
 
 
@@ -271,7 +361,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             </div>
             <Link
               href="/"
-              className="flex items-center justify-center rounded-lg p-3 text-white shadow-sm transition-colors hover:opacity-90 shrink-0"
+              className="group flex items-center justify-center rounded-lg p-3 text-white shadow-sm transition-all duration-300 hover:opacity-90 hover:scale-110 shrink-0"
               style={{ backgroundColor: '#32578E' }}
               aria-label="Return to home"
             >
@@ -281,6 +371,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 xmlns="http://www.w3.org/2000/svg"
+                className="transition-transform duration-300 group-hover:rotate-360"
               >
                 <path 
                   d="M19 12H5M5 12L12 19M5 12L12 5" 
@@ -294,300 +385,9 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
           </div>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <div className="flex flex-col gap-6">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              {/* Tab Navigation */}
-              <div className="flex items-center justify-between border-b border-zinc-200 pb-4 mb-4">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("workspaces")}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                      activeTab === "workspaces"
-                        ? "text-white"
-                        : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                    style={{
-                      fontFamily: 'var(--font-jura), sans-serif',
-                      backgroundColor: activeTab === "workspaces" ? '#32578E' : 'transparent',
-                    }}
-                  >
-                    Workspaces
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("timeline")}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                      activeTab === "timeline"
-                        ? "text-white"
-                        : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                    style={{
-                      fontFamily: 'var(--font-jura), sans-serif',
-                      backgroundColor: activeTab === "timeline" ? '#32578E' : 'transparent',
-                    }}
-                  >
-                    Timeline
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("tasks")}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                      activeTab === "tasks"
-                        ? "text-white"
-                        : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                    style={{
-                      fontFamily: 'var(--font-jura), sans-serif',
-                      backgroundColor: activeTab === "tasks" ? '#32578E' : 'transparent',
-                    }}
-                  >
-                    Tasks
-                  </button>
-                </div>
-                {activeTab === "timeline" && (
-                  <button
-                    type="button"
-                    className="text-xs underline-offset-4 hover:underline"
-                    style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                    onClick={() => setShowFullTimeline((value) => !value)}
-                  >
-                    {showFullTimeline ? "Show key moments" : "View full timeline"}
-                  </button>
-                )}
-              </div>
-              {/* Tab Content */}
-              <div>
-                {activeTab === "workspaces" && (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {computedSummary.domains.length === 0 ? (
-                      <p className="text-sm text-zinc-500">
-                        No workspace data yet.
-                      </p>
-                    ) : (
-                      computedSummary.domains.map((domain) => (
-                        <div
-                          key={domain.domain}
-                          className={`group rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
-                            domain.topUrls.length > 0
-                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            if (domain.topUrls.length > 0) {
-                              handleReopen(domain.topUrls);
-                            }
-                          }}
-                        >
-                          <div className="flex items-center justify-between text-sm">
-                            <div>
-                              <span
-                                className="font-semibold"
-                                style={{
-                                  fontFamily: "var(--font-jura), sans-serif",
-                                  color: "#32578E",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {domain.label}
-                              </span>
-                            </div>
-                            <span className="text-zinc-600">
-                              {formatDuration(domain.timeSec)}
-                            </span>
-                          </div>
-                          <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-400">
-                            {domain.topUrls.length === 0 ? (
-                              <span>No URLs captured.</span>
-                            ) : (
-                              domain.topUrls.map((url) => (
-                                <a
-                                  key={url}
-                                  href={url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="truncate underline-offset-4 hover:underline text-zinc-400"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {url}
-                                </a>
-                              ))
-                            )}
-                          </div>
-                          {domain.topUrls.length > 0 && (
-                            <button
-                              type="button"
-                              className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                              style={{
-                                fontFamily: "var(--font-jura), sans-serif",
-                                color: "#4777B9",
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleReopen(domain.topUrls);
-                              }}
-                            >
-                              Click to reopen workspace
-                            </button>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-
-                {activeTab === "timeline" && (
-                  <div className="flex flex-col gap-4">
-                    {!showFullTimeline && (
-                      <p className="text-xs text-zinc-500">
-                        Showing key moments · View full timeline
-                      </p>
-                    )}
-                    {keyTimeline.length === 0 ? (
-                      <p className="text-sm text-zinc-500">
-                        No events recorded yet.
-                      </p>
-                    ) : showFullTimeline ? (
-                      keyTimeline.map((event, index) => (
-                        <div
-                          key={`${event.ts}-${event.type}-${event.url || ''}-${index}`}
-                          className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
-                            event.url && event.type !== "BREAK"
-                              ? "hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
-                              : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
-                          }`}
-                        >
-                          {event.type === "BREAK" ? (
-                            <div className="text-xs text-zinc-500">
-                              <div className="font-medium font-jura text-zinc-700">
-                                Break detected ({formatDuration(event.durationSec)}) —
-                                not counted
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                                <span
-                                  className="font-semibold"
-                                  style={{
-                                    fontFamily: "var(--font-jura), sans-serif",
-                                    color: "#32578E",
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {event.title || "Untitled tab"}
-                                </span>
-                                <span className="text-sm text-zinc-600">
-                                  {formatDate(event.ts)}
-                                </span>
-                              </div>
-                              <div className="mt-1 flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 text-xs text-zinc-500">
-                                  {event.url ? (
-                                    <>
-                                      <span className="truncate" title={event.url}>
-                                        {shortenUrl(event.url)}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
-                                        title="Copy URL"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigator.clipboard.writeText(event.url);
-                                        }}
-                                      >
-                                        <svg
-                                          width="14"
-                                          height="14"
-                                          viewBox="0 0 16 16"
-                                          fill="none"
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          style={{ color: "#4777B9" }}
-                                        >
-                                          <path
-                                            d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
-                                            stroke="currentColor"
-                                            strokeWidth="1.2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                          />
-                                        </svg>
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <span>No URL</span>
-                                  )}
-                                </div>
-                                <span className="text-sm text-zinc-600">
-                                  Duration: {formatDuration(event.durationSec)}
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      collapsedTimeline.map((item) => (
-                        <div
-                          key={item.key}
-                          className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
-                        >
-                          {item.type === "break" ? (
-                            <div className="text-xs text-zinc-500">
-                              <div className="font-medium text-zinc-700">
-                                Break detected ({formatDuration(item.durationSec)}) —
-                                not counted
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600">
-                                <span>{item.label}</span>
-                                <span>{formatDate(item.ts)}</span>
-                                <span>
-                                  {item.visits > 1
-                                    ? `${item.visits} visits · ${formatDuration(
-                                        item.durationSec,
-                                      )}`
-                                    : `Duration: ${formatDuration(item.durationSec)}`}
-                                </span>
-                              </div>
-                              <div className="mt-2 text-sm font-medium text-zinc-900">
-                                {item.title || "Untitled tab"}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))
-                    )}
-                    {session.status === "ended" && (
-                      <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
-                        Session ended {formatDate(session.ended_at)}.
-                      </div>
-                    )}
-                    {session.status === "auto_ended" && (
-                      <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
-                        Session auto-ended after inactivity.
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === "tasks" && (
-                  <div className="flex flex-col gap-4">
-                    <p className="text-sm text-zinc-500">
-                      AI-generated tasks will appear here.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
+        <section className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <aside className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-center gap-2">
               <h2 
                 className="text-2xl font-semibold"
                 style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
@@ -603,19 +403,19 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </span>
               )}
             </div>
-            <div className="mt-4 space-y-6 text-base text-zinc-700">
+            <div className="mt-4 space-y-4 text-base text-zinc-700">
                 {session.status === "auto_ended" && (
                   <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
                     This session auto-ended after a long period of inactivity.
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-center" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                     Session Intent
                   </p>
                   {computedSummary.intent_tags.length > 0 ? (
                     <>
-                      <div className="mt-2 flex flex-wrap gap-2">
+                      <div className="mt-2 flex flex-wrap gap-2 justify-center">
                         {computedSummary.intent_tags.map((tag) => (
                           <span
                             key={tag}
@@ -628,13 +428,13 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       </div>
                     </>
                   ) : (
-                    <p className="mt-2 text-base text-zinc-600">No intent set.</p>
+                    <p className="mt-2 text-base text-zinc-600 text-center">No intent set.</p>
                   )}
                 </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 mt-4">
                 <button
                   type="button"
-                  className="rounded-lg px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60"
+                  className="cursor-pointer rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-sm"
                   style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#32578E', borderColor: '#32578E' }}
                   onClick={() =>
                     computedSummary.resumeUrls.length
@@ -647,119 +447,160 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M3 8L6 11L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    Resume where I left off
+                    RESUME
                   </span>
                 </button>
-                <button
-                  type="button"
-                  className="text-left text-sm underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                  onClick={() =>
-                    computedSummary.lastStop?.url
-                      ? handleReopen([computedSummary.lastStop.url])
-                      : null
-                  }
-                  disabled={!computedSummary.lastStop?.url}
-                >
-                  Open last stop only
-                </button>
               </div>
-              <p className="rounded-lg bg-zinc-50 px-3 py-2 text-base text-zinc-700">
-                {computedSummary.emotionalSummary}
-              </p>
+              
+              {/* Opennote Export Buttons */}
+              <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-zinc-200">
+                {journalUrl ? (
+                  <a
+                    href={journalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm text-center"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#4777B9', borderColor: '#4777B9' }}
+                  >
+                    ✅ Exported — Open in Opennote
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleExportJournal}
+                    disabled={exportingJournal}
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#4777B9', borderColor: '#4777B9' }}
+                  >
+                    {exportingJournal ? 'Exporting...' : 'Export to Opennote Journal'}
+                  </button>
+                )}
+                
+                {practiceUrl === 'pending' ? (
+                  <div className="rounded-full px-4 py-2 text-base font-semibold text-center"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#9ED5FF', color: '#32578E' }}
+                  >
+                    ⏳ Practice set generating...
+                  </div>
+                ) : practiceUrl ? (
+                  <a
+                    href={practiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm text-center"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#669EE6', borderColor: '#669EE6' }}
+                  >
+                    ✅ Practice Set Ready — Open in Opennote
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleExportPractice}
+                    disabled={exportingPractice}
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#669EE6', borderColor: '#669EE6' }}
+                  >
+                    {exportingPractice ? 'Generating...' : 'Generate Practice Problems (Opennote)'}
+                  </button>
+                )}
+                
+                {exportError && (
+                  <p className="text-xs text-red-600 mt-1">{exportError}</p>
+                )}
+              </div>
               {heuristic && (
-                <div className="rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-700">
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">
-                    Focus Recap
-                  </p>
+                <div className="text-sm text-zinc-700">
+                    <p className="text-base font-extrabold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                      Focus Recap
+                    </p>
+                  <div className="mt-4">
+                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                      AI Summary
+                    </p>
+                    <p className="text-base text-zinc-700">{computedSummary.resumeSummary}</p>
+                  </div>
                   <div className="mt-2 space-y-2">
                     <p>
                       <span className="font-semibold">You were doing:</span>{" "}
-                      {heuristic.doing}
+                      {(() => {
+                        const doingUrls = computedSummary.domains[0]?.topUrls?.length
+                          ? computedSummary.domains[0].topUrls
+                          : computedSummary.lastStop?.url
+                          ? [computedSummary.lastStop.url!]
+                          : null;
+                        return doingUrls ? (
+                          <button
+                            type="button"
+                            className="cursor-pointer underline-offset-4 hover:underline"
+                            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                            onClick={() => handleReopen(doingUrls)}
+                          >
+                            {heuristic.doing}
+                          </button>
+                        ) : (
+                          heuristic.doing
+                        );
+                      })()}
                     </p>
                     <p>
                       <span className="font-semibold">Where you left off:</span>{" "}
-                      {heuristic.leftOff}
+                      {computedSummary.lastStop?.url ? (
+                        <button
+                          type="button"
+                          className="cursor-pointer underline-offset-4 hover:underline"
+                          style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                          onClick={() => {
+                            if (computedSummary.lastStop?.url) {
+                              handleReopen([computedSummary.lastStop.url]);
+                            }
+                          }}
+                        >
+                          {heuristic.leftOff}
+                        </button>
+                      ) : (
+                        heuristic.leftOff
+                      )}
                     </p>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {heuristic.actions.map((action) => (
-                      <button
-                        key={action.label}
-                        type="button"
-                        className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-100"
-                        onClick={() => handleReopen(action.urls)}
-                      >
-                        {action.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 text-xs text-zinc-600">
-                    Next actions:
+                  {heuristic.actions.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {heuristic.actions.map((action) => (
+                        <button
+                          key={action.label}
+                          type="button"
+                          className="cursor-pointer rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-700 transition-all duration-200 hover:bg-zinc-100 hover:scale-105 hover:shadow-md"
+                          onClick={() => handleReopen(action.urls)}
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                      Next actions:
+                    </p>
+                    <div className="text-sm text-zinc-600">
                     <ul className="mt-2 list-disc pl-5">
                       {heuristic.nextActions.map((item) => (
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
-                  Resume Summary
-                </p>
-                <p className="mt-2 text-base">{computedSummary.resumeSummary}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
-                  Quick Actions
-                </p>
-                <div className="mt-2 flex flex-col gap-2 text-sm">
-                  <div className="text-zinc-700">
-                    Resume:{" "}
-                    <button
-                      type="button"
-                      className="underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                      onClick={() =>
-                        computedSummary.lastStop?.url
-                          ? handleReopen([computedSummary.lastStop.url])
-                          : null
-                      }
-                      disabled={!computedSummary.lastStop?.url}
-                    >
-                      Open last stop tab
-                    </button>
-                  </div>
-                  <div className="text-zinc-700">
-                    Continue in:{" "}
-                    <button
-                      type="button"
-                      className="underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                      onClick={() =>
-                        computedSummary.domains[0]?.topUrls?.length
-                          ? handleReopen(computedSummary.domains[0].topUrls)
-                          : null
-                      }
-                      disabled={!computedSummary.domains[0]?.topUrls?.length}
-                    >
-                      {computedSummary.domains[0]?.label ?? "Top"} workspace
-                    </button>
-                  </div>
-                  <div className="rounded-md border border-zinc-200 px-3 py-2 text-zinc-700">
-                    <div className="text-sm font-medium font-jura">
-                      Review top 3 pages visited
                     </div>
-                    <div className="mt-2 space-y-1 text-sm text-zinc-600">
+                  </div>
+                  <div className="mt-4">
+                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                      Review top 3 pages visited
+                    </p>
+                    <div className="space-y-1 text-sm">
                       {(computedSummary.topPages ?? []).length === 0 ? (
-                        <p>No pages yet.</p>
+                        <p className="text-zinc-600">No pages yet.</p>
                       ) : (
                         (computedSummary.topPages ?? []).map((page) => (
                           <button
                             key={page.url}
                             type="button"
-                            className="block w-full truncate text-left underline-offset-4 hover:underline"
+                            className="cursor-pointer block w-full truncate text-left underline-offset-4 hover:underline"
                             style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                             title={page.url}
                             onClick={() => handleReopen([page.url])}
@@ -771,7 +612,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+              <hr className="border-zinc-200 my-6" />
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Time Breakdown
@@ -805,11 +647,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   )}
                 </div>
               </div>
+              <hr className="border-zinc-200 my-6" />
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Intent Alignment
                 </p>
-                <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-600">
+                <div className="mt-2 text-sm text-zinc-600">
                   {computedSummary.focus.intentMissing ? (
                     <div className="text-base font-medium text-zinc-600" style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
                       Time split across different activities
@@ -912,27 +755,479 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   </div>
                 </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
-                  Last Stop
-                </p>
-                {computedSummary.lastStop ? (
-                  <a
-                    href={computedSummary.lastStop.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-block text-sm underline-offset-4 hover:underline"
-                    style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+            </div>
+          </aside>
+
+          <div className="flex flex-col gap-6">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+              {/* Tab Navigation */}
+              <div className="flex items-center justify-between border-b border-zinc-200 pb-4 mb-4">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("workspaces")}
+                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                      activeTab === "workspaces"
+                        ? "text-white hover:opacity-90"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
+                    }`}
+                    style={{
+                      fontFamily: 'var(--font-jura), sans-serif',
+                      backgroundColor: activeTab === "workspaces" ? '#32578E' : 'transparent',
+                    }}
                   >
-                    {computedSummary.lastStop.title ||
-                      computedSummary.lastStop.url}
-                  </a>
-                ) : (
-                  <p className="mt-2 text-base text-zinc-500">No last stop recorded.</p>
+                    Workspaces
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("timeline")}
+                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                      activeTab === "timeline"
+                        ? "text-white hover:opacity-90"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
+                    }`}
+                    style={{
+                      fontFamily: 'var(--font-jura), sans-serif',
+                      backgroundColor: activeTab === "timeline" ? '#32578E' : 'transparent',
+                    }}
+                  >
+                    Timeline
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("tasks")}
+                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                      activeTab === "tasks"
+                        ? "text-white hover:opacity-90"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
+                    }`}
+                    style={{
+                      fontFamily: 'var(--font-jura), sans-serif',
+                      backgroundColor: activeTab === "tasks" ? '#32578E' : 'transparent',
+                    }}
+                  >
+                    Tasks
+                  </button>
+                </div>
+              </div>
+              {/* Tab Content */}
+              <div>
+                {activeTab === "workspaces" && (
+                  <div className="flex flex-col gap-4">
+                    {computedSummary.domains.length === 0 ? (
+                      <p className="text-sm text-zinc-500">
+                        No workspace data yet.
+                      </p>
+                    ) : (
+                      computedSummary.domains.map((domain) => (
+                        <div
+                          key={domain.domain}
+                          className={`group rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
+                            domain.topUrls.length > 0
+                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            if (domain.topUrls.length > 0) {
+                              handleReopen(domain.topUrls);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between text-sm">
+                            <div>
+                              <span
+                                className="font-semibold"
+                                style={{
+                                  fontFamily: "var(--font-jura), sans-serif",
+                                  color: "#32578E",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {domain.label}
+                              </span>
+                            </div>
+                            <span className="text-zinc-600">
+                              {formatDuration(domain.timeSec)}
+                            </span>
+                          </div>
+                          <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-400">
+                            {domain.topUrls.length === 0 ? (
+                              <span>No URLs captured.</span>
+                            ) : (
+                              domain.topUrls.map((url) => (
+                                <a
+                                  key={url}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="truncate underline-offset-4 hover:underline text-zinc-400"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title={url}
+                                >
+                                  {shortenUrl(url)}
+                                </a>
+                              ))
+                            )}
+                          </div>
+                          {domain.topUrls.length > 0 && (
+                            <button
+                              type="button"
+                              className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                              style={{
+                                fontFamily: "var(--font-jura), sans-serif",
+                                color: "#4777B9",
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReopen(domain.topUrls);
+                              }}
+                            >
+                              Click to reopen workspace
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "timeline" && (
+                  <div className="flex flex-col gap-4">
+                    {!showFullTimeline && (
+                      <button
+                        type="button"
+                        className="cursor-pointer text-xs underline-offset-4 hover:underline"
+                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                        onClick={() => setShowFullTimeline((value) => !value)}
+                      >
+                        View full timeline
+                      </button>
+                    )}
+                    {showFullTimeline && (
+                      <button
+                        type="button"
+                        className="cursor-pointer text-xs underline-offset-4 hover:underline"
+                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                        onClick={() => setShowFullTimeline((value) => !value)}
+                      >
+                        View key moments
+                      </button>
+                    )}
+                    {keyTimeline.length === 0 ? (
+                      <p className="text-sm text-zinc-500">
+                        No events recorded yet.
+                      </p>
+                    ) : showFullTimeline ? (
+                      keyTimeline.map((event, index) => (
+                        <div
+                          key={`${event.ts}-${event.type}-${event.url || ''}-${index}`}
+                          className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
+                            event.url && event.type !== "BREAK"
+                              ? "hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
+                          }`}
+                        >
+                          {event.type === "BREAK" ? (
+                            <div className="text-xs text-zinc-500">
+                              <div className="font-medium font-jura text-zinc-700">
+                                Break detected ({formatDuration(event.durationSec)}) —
+                                not counted
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                <span
+                                  className="font-semibold"
+                                  style={{
+                                    fontFamily: "var(--font-jura), sans-serif",
+                                    color: "#32578E",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {event.title || "Untitled tab"}
+                                </span>
+                                <span className="text-sm text-zinc-600">
+                                  {formatDate(event.ts)}
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                                  {event.url ? (
+                                    <>
+                                      <span className="truncate" title={event.url}>
+                                        {shortenUrl(event.url)}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className="cursor-pointer flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
+                                        title={copiedItem === `url-${event.url}` ? "Copied!" : "Copy URL"}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigator.clipboard.writeText(event.url);
+                                          setCopiedItem(`url-${event.url}`);
+                                          setTimeout(() => setCopiedItem(null), 2000);
+                                        }}
+                                      >
+                                        {copiedItem === `url-${event.url}` ? (
+                                          <svg
+                                            width="14"
+                                            height="14"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            style={{ color: "#22c55e" }}
+                                          >
+                                            <path
+                                              d="M3 8L6 11L13 4"
+                                              stroke="currentColor"
+                                              strokeWidth="1.5"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            />
+                                          </svg>
+                                        ) : (
+                                          <svg
+                                            width="14"
+                                            height="14"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            style={{ color: "#4777B9" }}
+                                          >
+                                            <path
+                                              d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
+                                              stroke="currentColor"
+                                              strokeWidth="1.2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span>No URL</span>
+                                  )}
+                                </div>
+                                <span className="text-sm text-zinc-600">
+                                  Duration: {formatDuration(event.durationSec)}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      collapsedTimeline.map((item) => (
+                        <div
+                          key={item.key}
+                          className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
+                            item.type === "group" && item.url
+                              ? "hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
+                          }`}
+                        >
+                          {item.type === "break" ? (
+                            <div className="text-xs text-zinc-500">
+                              <div className="font-medium text-zinc-700">
+                                Break detected ({formatDuration(item.durationSec)}) —
+                                not counted
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                <span
+                                  className="font-semibold"
+                                  style={{
+                                    fontFamily: "var(--font-jura), sans-serif",
+                                    color: "#32578E",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {item.title || "Untitled tab"}
+                                </span>
+                                <span className="text-sm text-zinc-600">
+                                  {formatDate(item.ts)}
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between gap-2 text-xs text-zinc-500">
+                                <div className="flex items-center gap-2">
+                                  <span>{item.label}</span>
+                                  {item.url && (
+                                    <button
+                                      type="button"
+                                      className="cursor-pointer flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
+                                      title={copiedItem === `url-${item.url}` ? "Copied!" : "Copy URL"}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(item.url);
+                                        setCopiedItem(`url-${item.url}`);
+                                        setTimeout(() => setCopiedItem(null), 2000);
+                                      }}
+                                    >
+                                      {copiedItem === `url-${item.url}` ? (
+                                        <svg
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 16 16"
+                                          fill="none"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          style={{ color: "#22c55e" }}
+                                        >
+                                          <path
+                                            d="M3 8L6 11L13 4"
+                                            stroke="currentColor"
+                                            strokeWidth="1.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          />
+                                        </svg>
+                                      ) : (
+                                        <svg
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 16 16"
+                                          fill="none"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          style={{ color: "#4777B9" }}
+                                        >
+                                          <path
+                                            d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
+                                            stroke="currentColor"
+                                            strokeWidth="1.2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          />
+                                        </svg>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                                <span>
+                                  {item.visits > 1
+                                    ? `${item.visits} visits · ${formatDuration(
+                                        item.durationSec,
+                                      )}`
+                                    : `Duration: ${formatDuration(item.durationSec)}`}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))
+                    )}
+                    {session.status === "ended" && (
+                      <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
+                        Session ended {formatDate(session.ended_at)}.
+                      </div>
+                    )}
+                    {session.status === "auto_ended" && (
+                      <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
+                        Session auto-ended after inactivity.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "tasks" && (
+                  <div className="flex flex-col gap-4">
+                    {loadingTasks ? (
+                      <p className="text-sm text-zinc-500">Loading tasks...</p>
+                    ) : tasks.length === 0 ? (
+                      <p className="text-sm text-zinc-500">
+                        No tasks generated yet. Tasks will be generated from your session analysis.
+                      </p>
+                    ) : (
+                      <>
+                        {tasks.map((task: any, index: number) => (
+                          <div
+                            key={task.id || index}
+                            className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 hover:border-[#32578E] hover:bg-white hover:shadow-lg"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-base font-semibold" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                                    {task.title}
+                                  </span>
+                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                    task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                    task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {task.priority}
+                                  </span>
+                                  {task.urgency && (
+                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                      task.urgency === 'urgent' ? 'bg-orange-100 text-orange-700' :
+                                      task.urgency === 'soon' ? 'bg-amber-100 text-amber-700' :
+                                      'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {task.urgency}
+                                    </span>
+                                  )}
+                                </div>
+                                {task.reason && (
+                                  <p className="text-sm text-zinc-600 mb-2">{task.reason}</p>
+                                )}
+                                {task.context && (
+                                  <p className="text-xs text-zinc-500 italic">{task.context}</p>
+                                )}
+                                {task.estimatedTime && (
+                                  <p className="text-xs text-zinc-500 mt-2">
+                                    ⏱️ Estimated: {task.estimatedTime}
+                                  </p>
+                                )}
+                                {task.dependencies && task.dependencies.length > 0 && (
+                                  <p className="text-xs text-zinc-500 mt-1">
+                                    🔗 Depends on: {task.dependencies.join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {taskSuggestions.length > 0 && (
+                          <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
+                            <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                              Strategic Suggestions
+                            </h3>
+                            <ul className="space-y-2">
+                              {taskSuggestions.map((suggestion: string, i: number) => (
+                                <li key={i} className="text-sm text-zinc-700 flex items-start gap-2">
+                                  <span className="text-[#4777B9] mt-1">•</span>
+                                  <span>{suggestion}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {taskInsights.length > 0 && (
+                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                            <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}>
+                              Insights
+                            </h3>
+                            <ul className="space-y-2">
+                              {taskInsights.map((insight: string, i: number) => (
+                                <li key={i} className="text-sm text-zinc-600 flex items-start gap-2">
+                                  <span className="text-[#669EE6] mt-1">💡</span>
+                                  <span>{insight}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
-          </aside>
+          </div>
         </section>
       </div>
     </div>
@@ -1086,9 +1381,6 @@ function buildHeuristicSummary(summary: ComputedSummary) {
     actions.push({ label: "Open hackathon slides", urls: [slidesPage.url] });
   }
 
-  if (actions.length === 0) {
-    actions.push({ label: "Open last tab", urls: [lastStop.url] });
-  }
   if (nextActions.length === 0) {
     nextActions.push("Review your recent tabs");
     nextActions.push("Continue where you left off");

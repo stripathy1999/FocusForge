@@ -12,15 +12,21 @@ export default function LiveSessionPage() {
               Live Session
             </p>
             <h1 
-              className="mt-2 text-2xl font-semibold"
-              style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+              className="mt-2 font-weight-900"
+              style={{ 
+                fontFamily: 'var(--font-jura), sans-serif',
+                color: '#0F2854',
+                fontWeight: 900,
+                fontSize: '1.5rem',
+                lineHeight: '2rem'
+              }}
             >
               Use the extension to start a session
             </h1>
           </div>
           <Link
             href="/"
-            className="flex items-center justify-center rounded-lg p-3 text-white shadow-sm transition-colors hover:opacity-90 shrink-0"
+            className="group flex items-center justify-center rounded-lg p-3 text-white shadow-sm transition-all duration-300 hover:opacity-90 hover:scale-110 shrink-0"
             style={{ backgroundColor: '#32578E' }}
             aria-label="Return to home"
           >
@@ -30,6 +36,7 @@ export default function LiveSessionPage() {
               viewBox="0 0 24 24" 
               fill="none" 
               xmlns="http://www.w3.org/2000/svg"
+              className="transition-transform duration-300 group-hover:rotate-360"
             >
               <path 
                 d="M19 12H5M5 12L12 19M5 12L12 5" 

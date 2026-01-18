@@ -138,7 +138,7 @@ print(json.dumps(result))
     const nextActions = analysisSummary.nextActions || []
     const pendingDecisions = analysisSummary.pendingDecisions || []
     
-    const tasks = []
+    const tasks: any[] = []
     const taskIds: string[] = []
     
     nextActions.slice(0, 5).forEach((action: string, i: number) => {

@@ -5,6 +5,7 @@ const startBtn = document.getElementById("startBtn");
 const pauseBtn = document.getElementById("pauseBtn");
 const stopBtn = document.getElementById("stopBtn");
 const sessionIdEl = document.getElementById("sessionId");
+const copySessionIdBtn = document.getElementById("copySessionIdBtn");
 const timerEl = document.getElementById("timerEl");
 const intentInput = document.getElementById("intentInput");
 const saveIntentBtn = document.getElementById("saveIntentBtn");
@@ -96,6 +97,36 @@ async function apiPost(path, body) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
   });
+}
+
+async function apiGet(path) {
+  const url = `${DEFAULT_BASE_URL}${path}`;
+  return fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function verifyIntentSaved(sessionId, expectedIntent) {
+  try {
+    const response = await apiGet(`/api/session/${sessionId}`);
+    if (!response.ok) {
+      console.warn("Could not verify intent - session fetch failed:", response.status);
+      return false;
+    }
+    const data = await response.json();
+    const savedIntent = data.session?.intent_text || data.session?.intent_raw || "";
+    const matches = savedIntent.trim() === expectedIntent.trim();
+    if (matches) {
+      console.log("✓ Intent verified in session:", savedIntent);
+    } else {
+      console.warn("⚠ Intent mismatch. Expected:", expectedIntent, "Got:", savedIntent);
+    }
+    return matches;
+  } catch (error) {
+    console.error("Error verifying intent:", error);
+    return false;
+  }
 }
 
 function formatElapsed(ms) {
@@ -207,6 +238,22 @@ async function handleStart() {
     pausedAt: null,
     baseUrl,
   });
+  
+  // Auto-save intent after starting session
+  console.log("Auto-saving intent:", intent);
+  const intentResponse = await apiPost("/api/session/intent", {
+    sessionId: data.sessionId,
+    intent,
+  });
+  if (!intentResponse.ok) {
+    const errorText = await intentResponse.text();
+    console.error("Failed to save intent:", intentResponse.status, errorText);
+    statusText.textContent = "Session started, but intent save failed";
+    statusText.className = "status status--error";
+  } else {
+    console.log("Intent saved successfully");
+  }
+  
   render(await getState());
 }
 
@@ -297,6 +344,24 @@ async function handleStartFresh() {
     intent,
     baseUrl,
   });
+  
+  // Auto-save intent after starting session
+  console.log("Auto-saving intent:", intent);
+  const intentResponse = await apiPost("/api/session/intent", {
+    sessionId: data.sessionId,
+    intent,
+  });
+  if (!intentResponse.ok) {
+    const errorText = await intentResponse.text();
+    console.error("Failed to save intent:", intentResponse.status, errorText);
+    statusText.textContent = "Session started, but intent save failed";
+    statusText.className = "status status--error";
+  } else {
+    console.log("✓ Intent save API call successful");
+    // Verify the intent was actually saved
+    await verifyIntentSaved(data.sessionId, intent);
+  }
+  
   render(await getState());
 }
 
@@ -360,6 +425,49 @@ stopBtn.addEventListener("click", handleStop);
 startFreshBtn?.addEventListener("click", handleStartFresh);
 continueLastBtn?.addEventListener("click", handleContinueLast);
 saveIntentBtn?.addEventListener("click", handleSaveIntent);
+
+copySessionIdBtn?.addEventListener("click", async () => {
+  const state = await getState();
+  const sessionId = state.sessionId;
+  if (sessionId && sessionId !== "—") {
+    try {
+      await navigator.clipboard.writeText(sessionId);
+      const originalTitle = copySessionIdBtn.title;
+      copySessionIdBtn.title = "Copied!";
+      
+      // Replace copy icon with checkmark
+      const svg = copySessionIdBtn.querySelector("svg");
+      if (svg) {
+        const originalSVG = svg.outerHTML;
+        svg.outerHTML = `
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #22c55e">
+            <path
+              d="M3 8L6 11L13 4"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        `;
+        
+        setTimeout(() => {
+          copySessionIdBtn.title = originalTitle;
+          const currentSvg = copySessionIdBtn.querySelector("svg");
+          if (currentSvg) {
+            currentSvg.outerHTML = originalSVG;
+          }
+        }, 2000);
+      } else {
+        setTimeout(() => {
+          copySessionIdBtn.title = originalTitle;
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Failed to copy session ID:", err);
+    }
+  }
+});
 
 getState().then(render);
 getBaseUrl().then(() => {});

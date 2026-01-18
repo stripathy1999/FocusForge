@@ -1,60 +1,56 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-import { supabaseAdmin } from '@/lib/supabase'
-import { sanitizeAnalysis } from '@/lib/utils'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSession, getEvents, getAnalysis } from '@/lib/store'
+import { computeSummary } from '@/lib/grouping'
 
-/**
- * Get task plan for a session.
- * Calls the planning agent with the analysis summary.
- */
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+export async function GET(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
   try {
-    const { id } = req.query
+    const { id } = await context.params
 
-    if (!id || typeof id !== 'string') {
-      return res.status(400).json({ error: 'Invalid session ID' })
+    // Get session data from local store
+    const session = getSession(id)
+    if (!session) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    // Get analysis summary
-    const { data: analysis, error: analysisError } = await supabaseAdmin
-      .from('analysis')
-      .select('summary_json')
-      .eq('session_id', id)
-      .single()
+    const events = getEvents(id)
+    const analysis = getAnalysis(id)
+    const computedSummary = computeSummary(session, events, analysis)
 
-    if (analysisError || !analysis) {
-      return res.status(404).json({ error: 'Analysis not found. Session may not be analyzed yet.' })
+    // Convert to planning agent format
+    const analysisSummary = {
+      goalInferred: '',
+      workspaces: computedSummary.domains.map(d => ({
+        label: d.label,
+        timeSec: d.timeSec,
+        topUrls: d.topUrls
+      })),
+      resumeSummary: computedSummary.resumeSummary || '',
+      lastStop: computedSummary.lastStop ? {
+        label: computedSummary.lastStop.label || computedSummary.lastStop.title || '',
+        url: computedSummary.lastStop.url
+      } : { label: '', url: '' },
+      nextActions: computedSummary.nextActions || [],
+      pendingDecisions: computedSummary.pendingDecisions || []
     }
 
-    // Sanitize analysis
-    const analysisSummary = sanitizeAnalysis(analysis.summary_json)
+    // Call planning agent (backend Pages Router API)
+    const protocol = process.env.VERCEL_URL ? 'https' : 'http'
+    const host = _request.headers.get('host') || 'localhost:3000'
+    const planUrl = `${protocol}://${host}/api/plan`
 
-    // Get session for goal
-    const { data: session } = await supabaseAdmin
-      .from('sessions')
-      .select('intent_text')
-      .eq('id', id)
-      .single()
-
-    const userGoal = session?.intent_text || null
-
-    // Call planning agent API (internal)
     let taskPlan: any
     try {
-      const planResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/plan`, {
+      const planResponse = await fetch(planUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           analysisSummary: analysisSummary,
-          userGoal: userGoal
+          userGoal: session.intent_raw || null
         }),
         signal: AbortSignal.timeout(30000) // 30 second timeout
       })
@@ -66,18 +62,21 @@ export default async function handler(
       taskPlan = await planResponse.json()
     } catch (planError: any) {
       console.error('Planning API error:', planError)
-      // Return basic task plan from analysis
+      // Return basic task plan from analysis as fallback
       taskPlan = createBasicTaskPlan(analysisSummary)
     }
 
-    return res.status(200).json({
+    return NextResponse.json({
       sessionId: id,
       analysis: analysisSummary,
       taskPlan: taskPlan
     })
   } catch (error: any) {
     console.error('Unexpected error:', error)
-    return res.status(500).json({ error: error.message || 'Internal server error' })
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 

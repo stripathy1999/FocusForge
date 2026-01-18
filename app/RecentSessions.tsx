@@ -71,26 +71,30 @@ export function RecentSessions() {
   return (
     <div className="mt-4 flex flex-col gap-3 text-sm text-zinc-600">
       {sessions.map((session) => (
-        <div
+        <Link
           key={session.id}
-          className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          href={`/session/${session.id}`}
+          className="flex flex-col gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 transition-all duration-200 hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <div className="font-medium text-zinc-900">
-              {buildTitle(session)}
+            <div>
+              <span
+                className="font-semibold"
+                style={{
+                  fontFamily: "var(--font-jura), sans-serif",
+                  color: "#32578E",
+                  fontWeight: 700,
+                }}
+              >
+                {buildTitle(session)}
+              </span>
             </div>
             <div className="mt-1 text-xs text-zinc-500">
               Status: {session.status} · Duration:{" "}
               {formatDuration(session.durationSec)}
             </div>
           </div>
-          <Link
-            href={`/session/${session.id}`}
-            className="text-blue-600 underline"
-          >
-            Open
-          </Link>
-        </div>
+        </Link>
       ))}
     </div>
   );

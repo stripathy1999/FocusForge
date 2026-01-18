@@ -154,15 +154,16 @@ export default async function handler(
       console.error('Analysis error:', analysisError)
       // Store safe default analysis
       const safeAnalysis = getSafeDefaultAnalysis()
-      await supabaseAdmin
-        .from('analysis')
-        .upsert({
-          session_id: sessionId,
-          summary_json: safeAnalysis
-        })
-        .catch(() => {
-          // Ignore errors storing safe default
-        })
+      try {
+        await supabaseAdmin
+          .from('analysis')
+          .upsert({
+            session_id: sessionId,
+            summary_json: safeAnalysis
+          })
+      } catch {
+        // Ignore errors storing safe default
+      }
 
       return res.status(200).json({ 
         success: true, 

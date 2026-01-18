@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { spawn } from 'child_process'
 import { join } from 'path'
+import { getSafeDefaultAnalysis } from '../../lib/utils'
 
 export default async function handler(
   req: NextApiRequest,
@@ -108,7 +109,6 @@ export default async function handler(
   } catch (error: any) {
     console.error('Analysis error:', error)
     // Return safe default instead of error
-    const { getSafeDefaultAnalysis } = await import('@/lib/utils')
     return res.status(200).json(getSafeDefaultAnalysis())
   }
 }

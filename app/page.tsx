@@ -7,80 +7,90 @@ export default function Home() {
   return (
     <div
       className="min-h-screen px-6 py-12 text-zinc-900"
-      style={{ backgroundColor: "#BDE8F5" }}
+      style={{
+        backgroundColor: "#BDE8F5",
+        backgroundImage: `
+          radial-gradient(circle, rgba(50, 87, 142, 0.2) 1.5px, transparent 1.5px),
+          repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px),
+          repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0, 0, 0, 0.02) 2px, rgba(0, 0, 0, 0.02) 4px)
+        `,
+        backgroundSize: "28px 28px, 3px 3px, 3px 3px",
+      }}
     >
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
-        <header className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/focus_forge_logo.png"
-              alt="FocusForge"
-              width={90}
-              height={90}
-              className="h-[90px] w-[90px]"
-            />
-            <h1
-              className="text-[90px] font-semibold leading-none"
+        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+          <header>
+            <div className="flex items-center justify-center gap-3">
+              <Image
+                src="/focus_forge_logo.png"
+                alt="FocusForge"
+                width={90}
+                height={90}
+                className="h-[90px] w-[90px]"
+              />
+              <h1
+                className="text-[90px] font-semibold leading-none"
+                style={{
+                  fontFamily: "var(--font-jura), sans-serif",
+                  color: "#32578E",
+                }}
+              >
+                FocusForge
+              </h1>
+            </div>
+            <h2
+              className="mt-4 text-center text-3xl font-semibold"
               style={{
                 fontFamily: "var(--font-jura), sans-serif",
-                color: "#32578E",
+                color: "#669EE6",
               }}
             >
-              FocusForge
-            </h1>
-          </div>
-          <h2
-            className="mt-4 text-3xl font-semibold"
-            style={{
-              fontFamily: "var(--font-jura), sans-serif",
-              color: "#669EE6",
-            }}
-          >
-            Auto-track browser sessions and resume faster.
-          </h2>
-          <p className="mt-4 max-w-2xl text-sm" style={{ color: "#8f8f9f" }}>
-            FocusForge only captures the active tab&apos;s URL, title, and
-            timestamps. No page content, no keystrokes, and no personal data
-            beyond what your browser already exposes.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/session/live"
-              className="rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm"
-              style={{
-                fontFamily: "var(--font-jura), sans-serif",
-                backgroundColor: "#32578E",
-                borderColor: "#32578E",
-              }}
-            >
-              Open Session
-            </Link>
-            <Link
-              href="/session/demo"
-              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-zinc-100"
-              style={{
-                fontFamily: "var(--font-jura), sans-serif",
-                color: "#32578E",
-                borderColor: "#32578E",
-              }}
-            >
-              View Demo
-            </Link>
-          </div>
-        </header>
+              Auto-track browser sessions and resume faster.
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-center text-sm" style={{ color: "#8f8f9f" }}>
+              FocusForge only captures the active tab&apos;s URL, title, and
+              timestamps. No page content, no keystrokes, and no personal data
+              beyond what your browser already exposes.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/session/live"
+                className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90"
+                style={{
+                  fontFamily: "var(--font-jura), sans-serif",
+                  backgroundColor: "#32578E",
+                  borderColor: "#32578E",
+                }}
+              >
+                Open Session
+              </Link>
+              <Link
+                href="/session/demo"
+                className="cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition-all duration-200 hover:bg-zinc-100 hover:scale-105 hover:shadow-md"
+                style={{
+                  fontFamily: "var(--font-jura), sans-serif",
+                  color: "#32578E",
+                  borderColor: "#32578E",
+                }}
+              >
+                View Demo
+              </Link>
+            </div>
+          </header>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2
-            className="text-lg font-semibold"
-            style={{
-              fontFamily: "var(--font-jura), sans-serif",
-              color: "#32578E",
-            }}
-          >
-            Recent Sessions
-          </h2>
-          <RecentSessions />
-        </section>
+          <section className="mt-10 border-t border-zinc-200 pt-8">
+            <h2
+              className="text-lg font-semibold"
+              style={{
+                fontFamily: "var(--font-jura), sans-serif",
+                color: "#669EE6",
+              }}
+            >
+              Recent Sessions
+            </h2>
+            <RecentSessions />
+          </section>
+        </div>
       </div>
     </div>
   );
