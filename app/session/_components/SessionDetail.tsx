@@ -220,6 +220,13 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
     : buildCollapsedTimeline(keyTimeline);
 
   const heuristic = buildHeuristicSummary(computedSummary);
+  
+  // Opennote export state
+  const [exportingJournal, setExportingJournal] = useState(false);
+  const [exportingPractice, setExportingPractice] = useState(false);
+  const [journalUrl, setJournalUrl] = useState<string | null>(null);
+  const [practiceUrl, setPracticeUrl] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     const topWorkspaces = computedSummary.domains
@@ -246,6 +253,51 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const handleReopen = (urls: string[]) => {
     window.postMessage({ type: "FOCUSFORGE_REOPEN", urls }, "*");
     urls.forEach((url) => window.open(url, "_blank", "noopener,noreferrer"));
+  };
+
+  const handleExportJournal = async () => {
+    setExportingJournal(true);
+    setExportError(null);
+    try {
+      const response = await fetch('/api/opennote/journal/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id }),
+      });
+      const data = await response.json();
+      if (response.ok && data.ok) {
+        setJournalUrl(data.journalUrl || `https://opennote.com/journal/${data.journalId}`);
+      } else {
+        setExportError(data.error || 'Failed to export journal');
+      }
+    } catch (error: any) {
+      setExportError(error.message || 'Failed to export journal');
+    } finally {
+      setExportingJournal(false);
+    }
+  };
+
+  const handleExportPractice = async () => {
+    setExportingPractice(true);
+    setExportError(null);
+    try {
+      const response = await fetch('/api/opennote/practice/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id }),
+      });
+      const data = await response.json();
+      if (response.ok && data.ok) {
+        // Practice set is being generated, show success message
+        setPracticeUrl('pending');
+      } else {
+        setExportError(data.error || 'Failed to create practice set');
+      }
+    } catch (error: any) {
+      setExportError(error.message || 'Failed to create practice set');
+    } finally {
+      setExportingPractice(false);
+    }
   };
 
 
@@ -360,6 +412,63 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     RESUME
                   </span>
                 </button>
+              </div>
+              
+              {/* Opennote Export Buttons */}
+              <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-zinc-200">
+                {journalUrl ? (
+                  <a
+                    href={journalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm text-center"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#4777B9', borderColor: '#4777B9' }}
+                  >
+                    ✅ Exported — Open in Opennote
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleExportJournal}
+                    disabled={exportingJournal}
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#4777B9', borderColor: '#4777B9' }}
+                  >
+                    {exportingJournal ? 'Exporting...' : 'Export to Opennote Journal'}
+                  </button>
+                )}
+                
+                {practiceUrl === 'pending' ? (
+                  <div className="rounded-full px-4 py-2 text-base font-semibold text-center"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#9ED5FF', color: '#32578E' }}
+                  >
+                    ⏳ Practice set generating...
+                  </div>
+                ) : practiceUrl ? (
+                  <a
+                    href={practiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm text-center"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#669EE6', borderColor: '#669EE6' }}
+                  >
+                    ✅ Practice Set Ready — Open in Opennote
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleExportPractice}
+                    disabled={exportingPractice}
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#669EE6', borderColor: '#669EE6' }}
+                  >
+                    {exportingPractice ? 'Generating...' : 'Generate Practice Problems (Opennote)'}
+                  </button>
+                )}
+                
+                {exportError && (
+                  <p className="text-xs text-red-600 mt-1">{exportError}</p>
+                )}
               </div>
               {heuristic && (
                 <div className="text-sm text-zinc-700">
