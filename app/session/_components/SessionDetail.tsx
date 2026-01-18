@@ -447,19 +447,17 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M3 8L6 11L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    RESUME
+                    Resume Session
                   </span>
                 </button>
-              </div>
-              
-              {/* Opennote Export Buttons */}
-              <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-zinc-200">
+                
+                {/* Opennote Export Buttons */}
                 {journalUrl ? (
                   <a
                     href={journalUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm text-center"
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm text-center transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90"
                     style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#4777B9', borderColor: '#4777B9' }}
                   >
                     ✅ Exported — Open in Opennote
@@ -469,7 +467,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     type="button"
                     onClick={handleExportJournal}
                     disabled={exportingJournal}
-                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-sm"
                     style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#4777B9', borderColor: '#4777B9' }}
                   >
                     {exportingJournal ? 'Exporting...' : 'Export to Opennote Journal'}
@@ -508,6 +506,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   <p className="text-xs text-red-600 mt-1">{exportError}</p>
                 )}
               </div>
+              <hr className="border-zinc-200 my-6" />
               {heuristic && (
                 <div className="text-sm text-zinc-700">
                     <p className="text-base font-extrabold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
