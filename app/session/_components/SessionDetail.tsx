@@ -118,8 +118,12 @@ function TimeBreakdownPie({
   formatDuration: (s?: number) => string;
 }) {
   const [hovered, setHovered] = useState<{ label: string; pct: number } | null>(null);
-  const total = segments.reduce((s, i) => s + i.timeSec, 0);
-  if (total <= 0) {
+  
+  // Filter out segments with zero or negative time
+  const validSegments = segments.filter((seg) => seg.timeSec > 0);
+  const total = validSegments.reduce((s, i) => s + i.timeSec, 0);
+  
+  if (total <= 0 || validSegments.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3">
         <div className="flex h-[140px] w-[140px] items-center justify-center rounded-full bg-zinc-100">
@@ -134,18 +138,21 @@ function TimeBreakdownPie({
   const R = 52;
   const r = 34;
   const outlineWidth = 2; // outline between segments
-  let cumulativeAngle = 0;
+  let cumulativeAngle = -Math.PI / 2; // Start at top (12 o'clock)
 
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative h-[140px] w-[140px] shrink-0">
         <svg
           viewBox="0 0 120 120"
+          width="140"
+          height="140"
           className="h-full w-full"
           role="img"
           aria-label="Time breakdown by category"
+          style={{ display: 'block' }}
         >
-          {segments.map((seg, i) => {
+          {validSegments.map((seg, i) => {
             const fraction = Math.max(0, seg.timeSec / total);
             const pct = total > 0 ? Math.round((seg.timeSec / total) * 100) : 0;
             const a1 = cumulativeAngle;
@@ -159,18 +166,32 @@ function TimeBreakdownPie({
             const y = (rad: number) => cy + R * Math.sin(rad);
             const xi = (rad: number) => cx + r * Math.cos(rad);
             const yi = (rad: number) => cy + r * Math.sin(rad);
-            const large = a2 - a1 >= Math.PI ? 1 : 0;
-            const d =
-              `M ${x(a1)} ${y(a1)}` +
-              ` A ${R} ${R} 0 ${large} 1 ${x(a2)} ${y(a2)}` +
-              ` L ${xi(a2)} ${yi(a2)}` +
-              ` A ${r} ${r} 0 ${large} 0 ${xi(a1)} ${yi(a1)} Z`;
+            
+            // Handle full circle case (single segment or 100% segment)
+            let d: string;
+            if (Math.abs(fraction - 1) < 0.0001 || validSegments.length === 1) {
+              // Full circle - draw complete donut by going almost all the way around
+              const a2_adjusted = a1 + 2 * Math.PI - 0.001;
+              d =
+                `M ${x(a1)} ${y(a1)}` +
+                ` A ${R} ${R} 0 1 1 ${x(a2_adjusted)} ${y(a2_adjusted)}` +
+                ` L ${xi(a2_adjusted)} ${yi(a2_adjusted)}` +
+                ` A ${r} ${r} 0 1 0 ${xi(a1)} ${yi(a1)} Z`;
+            } else {
+              const large = a2 - a1 >= Math.PI ? 1 : 0;
+              d =
+                `M ${x(a1)} ${y(a1)}` +
+                ` A ${R} ${R} 0 ${large} 1 ${x(a2)} ${y(a2)}` +
+                ` L ${xi(a2)} ${yi(a2)}` +
+                ` A ${r} ${r} 0 ${large} 0 ${xi(a1)} ${yi(a1)} Z`;
+            }
+            
             return (
               <path
                 key={`${seg.label}-${i}`}
                 d={d}
                 fill={color}
-                stroke="#e4e4e7"
+                stroke="#ffffff"
                 strokeWidth={outlineWidth}
                 strokeLinejoin="round"
                 className="cursor-pointer transition-opacity hover:opacity-90"
@@ -194,7 +215,7 @@ function TimeBreakdownPie({
         )}
       </div>
       <div className="w-full space-y-1.5">
-        {segments.map((seg, i) => {
+        {validSegments.map((seg, i) => {
           const isBreak = seg.label.toLowerCase().includes("break");
           const color = isBreak
             ? PIE_BREAK_COLOR
