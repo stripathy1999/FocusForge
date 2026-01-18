@@ -13,13 +13,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get session data from local store
-    const session = getSession(sessionId)
+    const session = await getSession(sessionId)
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    const events = getEvents(sessionId)
-    const analysis = getAnalysis(sessionId)
+    const events = await getEvents(sessionId)
+    const analysis = await getAnalysis(sessionId)
     const computedSummary = computeSummary(session, events, analysis)
 
     // Convert timeline events to Opennote format
