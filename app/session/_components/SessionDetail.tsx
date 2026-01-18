@@ -716,42 +716,49 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     return (
                       <div className="mt-3 space-y-2.5">
                         <div
-                          className="flex min-h-[12px] w-full overflow-hidden rounded-full bg-zinc-200"
+                          className="relative min-h-[12px] w-full overflow-hidden rounded-full bg-zinc-200"
                           role="img"
                           aria-label={`Aligned ${formatDuration(a)}, Off-intent ${formatDuration(o)}, Neutral ${formatDuration(n)}`}
                         >
                           {total > 0 ? (
                             <>
-                              <div
-                                className="h-full shrink-0"
-                                style={{
-                                  flex: `0 0 ${pctA}%`,
-                                  backgroundColor: "#32578E",
-                                  minWidth: a > 0 ? "2px" : undefined,
-                                }}
-                                title={`Aligned: ${formatDuration(a)}`}
-                              />
-                              <div
-                                className="h-full shrink-0"
-                                style={{
-                                  flex: `0 0 ${pctO}%`,
-                                  backgroundColor: "#4a7fc4",
-                                  minWidth: o > 0 ? "2px" : undefined,
-                                }}
-                                title={`Off-intent: ${formatDuration(o)}`}
-                              />
-                              <div
-                                className="h-full shrink-0"
-                                style={{
-                                  flex: `0 0 ${pctN}%`,
-                                  backgroundColor: "#94a3b8",
-                                  minWidth: n > 0 ? "2px" : undefined,
-                                }}
-                                title={`Neutral: ${formatDuration(n)}`}
-                              />
+                              {a > 0 && (
+                                <div
+                                  className="absolute left-0 top-0 h-full"
+                                  style={{
+                                    width: `${pctA}%`,
+                                    backgroundColor: "#32578E",
+                                    minWidth: pctA < 1 ? "2px" : undefined,
+                                  }}
+                                  title={`Aligned: ${formatDuration(a)}`}
+                                />
+                              )}
+                              {o > 0 && (
+                                <div
+                                  className="absolute top-0 h-full"
+                                  style={{
+                                    left: `${pctA}%`,
+                                    width: `${pctO}%`,
+                                    backgroundColor: "#4a7fc4",
+                                    minWidth: pctO < 1 ? "2px" : undefined,
+                                  }}
+                                  title={`Off-intent: ${formatDuration(o)}`}
+                                />
+                              )}
+                              {n > 0 && (
+                                <div
+                                  className="absolute top-0 h-full"
+                                  style={{
+                                    left: `${pctA + pctO}%`,
+                                    width: `${pctN}%`,
+                                    backgroundColor: "#94a3b8",
+                                  }}
+                                  title={`Neutral: ${formatDuration(n)}`}
+                                />
+                              )}
                             </>
                           ) : (
-                            <div className="h-full min-h-[12px] w-full flex-1" style={{ backgroundColor: "#9ED5FF" }} />
+                            <div className="h-full min-h-[12px] w-full" style={{ backgroundColor: "#9ED5FF" }} />
                           )}
                         </div>
                         <div className="flex flex-nowrap gap-x-3 text-xs text-zinc-600">
