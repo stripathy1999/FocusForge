@@ -1,87 +1,105 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getSession, getEvents, getAnalysis } from '@/lib/store'
-import { computeSummary } from '@/lib/grouping'
-import { generateSessionMarkdown, importJournalToOpennote } from '@/lib/opennote'
+import { corsHeaders, corsJson } from "@/app/api/cors";
 
-export async function POST(request: NextRequest) {
+// App Router route that proxies to backend Pages Router API route
+// The backend route (backend/pages/api/opennote/journal/export.ts) uses Supabase
+// to fetch session data from the database, making it work with the fully deployed backend
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
+
+export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { sessionId } = body
+    const body = await request.json();
+    const { sessionId } = body;
 
     if (!sessionId) {
-      return NextResponse.json({ error: 'sessionId is required' }, { status: 400 })
+      return corsJson({ error: "Missing sessionId" }, { status: 400 });
     }
 
-    // Get session data from local store
-    const session = await getSession(sessionId)
-    if (!session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
-    }
-
-    const events = await getEvents(sessionId)
-    const analysis = await getAnalysis(sessionId)
-    const computedSummary = computeSummary(session, events, analysis)
-
-    // Convert timeline events to Opennote format
-    const timelineEvents = computedSummary.timeline.filter(e => e.type === 'TAB_ACTIVE')
+    // Determine backend URL for Pages Router API route
+    // In production (same deployment), both App Router and Pages Router share the same host
+    // If backend is deployed separately, use BACKEND_API_URL
+    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
     
-    const sessionData = {
-      session: {
-        id: session.id,
-        started_at: new Date(session.started_at).toISOString(),
-        ended_at: session.ended_at ? new Date(session.ended_at).toISOString() : null,
-        intent_text: session.intent_raw || null
-      },
-      events: timelineEvents.map(e => ({
-        url: e.url,
-        title: e.title || null,
-        duration_sec: e.durationSec || null,
-        domain: e.domain || null,
-        ts: new Date(e.ts).toISOString()
-      })),
-      analysis: {
-        resumeSummary: computedSummary.resumeSummary || '',
-        workspaces: computedSummary.domains.map(d => ({
-          label: d.label,
-          timeSec: d.timeSec,
-          topUrls: d.topUrls
-        })),
-        lastStop: computedSummary.lastStop ? {
-          label: computedSummary.lastStop.label || computedSummary.lastStop.title || '',
-          url: computedSummary.lastStop.url
-        } : { label: '', url: '' },
-        nextActions: computedSummary.nextActions || [],
-        pendingDecisions: computedSummary.pendingDecisions || [],
-        goalInferred: ''
-      }
+    let fetchUrl: string;
+    if (backendUrl) {
+      // External backend deployment
+      fetchUrl = `${backendUrl.replace(/\/$/, '')}/api/opennote/journal/export`;
+    } else {
+      // Same deployment - construct URL from request host
+      // In Next.js, Pages Router API routes are accessible from App Router on the same host
+      const url = new URL(request.url);
+      const protocol = process.env.VERCEL_URL ? 'https' : url.protocol;
+      const host = request.headers.get('host') || url.host;
+      fetchUrl = `${protocol}//${host}/api/opennote/journal/export`;
     }
 
-    // Generate markdown
-    const markdown = generateSessionMarkdown(sessionData)
-    const title = `FocusForge — Session ${sessionId.slice(0, 8)}`
-
-    // Export to Opennote
-    let journalResult
     try {
-      journalResult = await importJournalToOpennote(markdown, title)
-    } catch (opennoteError: any) {
-      console.error('Opennote export error:', opennoteError)
-      return NextResponse.json({ 
-        error: 'Failed to export to Opennote',
-        details: opennoteError.message 
-      }, { status: 500 })
-    }
+      const response = await fetch(fetchUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ sessionId }),
+      });
 
-    return NextResponse.json({
-      ok: true,
-      journalId: journalResult.journalId,
-      journalUrl: journalResult.url
-    })
+      // Check if response is OK before parsing
+      if (!response.ok) {
+        let errorMessage = "Failed to export journal"
+        const contentType = response.headers.get("content-type")
+        
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorData.message || errorMessage
+          } catch {
+            errorMessage = await response.text() || errorMessage
+          }
+        } else {
+          errorMessage = await response.text() || errorMessage
+        }
+        
+        return corsJson(
+          { error: errorMessage },
+          { status: response.status }
+        );
+      }
+
+      // Parse JSON only if response is OK
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text()
+        return corsJson(
+          { error: `Expected JSON but got ${contentType || 'text/plain'}. Response: ${text.substring(0, 200)}` },
+          { status: 500 }
+        );
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError: any) {
+        const text = await response.text()
+        return corsJson(
+          { error: `Failed to parse JSON response: ${parseError.message}. Response: ${text.substring(0, 200)}` },
+          { status: 500 }
+        );
+      }
+
+      return corsJson(data);
+    } catch (fetchError: any) {
+      // If fetch fails, it means backend route doesn't exist or isn't accessible
+      return corsJson(
+        { error: `Failed to reach backend: ${fetchError.message}. Make sure backend server is running or set BACKEND_API_URL.` },
+        { status: 503 }
+      );
+    }
   } catch (error: any) {
-    console.error('Journal export error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to export journal' },
+    console.error("Opennote journal export error:", error);
+    return corsJson(
+      { error: error.message || "Internal server error" },
       { status: 500 }
-    )
+    );
   }
 }
