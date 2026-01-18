@@ -88,8 +88,8 @@ function createBasicTaskPlan(analysis: any): any {
   const nextActions = analysis.nextActions || []
   const pendingDecisions = analysis.pendingDecisions || []
 
-  const tasks = []
-  const taskIds = []
+  const tasks: any[] = []
+  const taskIds: string[] = []
 
   // Convert nextActions to tasks
   nextActions.slice(0, 5).forEach((action: string, i: number) => {
