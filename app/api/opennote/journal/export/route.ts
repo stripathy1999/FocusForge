@@ -1,8 +1,10 @@
 import { corsHeaders, corsJson } from "@/app/api/cors";
+import { supabaseAdmin } from "@/lib/supabase";
+import { generateSessionMarkdown, importJournalToOpennote } from "@/lib/opennote";
+import { getSafeDefaultAnalysis } from "@/lib/utils";
 
-// App Router route that proxies to backend Pages Router API route
-// The backend route (backend/pages/api/opennote/journal/export.ts) uses Supabase
-// to fetch session data from the database, making it work with the fully deployed backend
+// App Router route that directly uses Supabase and Opennote API
+// This avoids the fetch proxy issue and uses the database directly
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders });
@@ -10,93 +12,122 @@ export async function OPTIONS() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError: any) {
+      return corsJson({ error: "Invalid JSON in request body", details: parseError.message }, { status: 400 });
+    }
+    
     const { sessionId } = body;
 
-    if (!sessionId) {
-      return corsJson({ error: "Missing sessionId" }, { status: 400 });
+    if (!sessionId || typeof sessionId !== 'string') {
+      return corsJson({ error: "Missing or invalid sessionId" }, { status: 400 });
     }
 
-    // Determine backend URL for Pages Router API route
-    // In production (same deployment), both App Router and Pages Router share the same host
-    // If backend is deployed separately, use BACKEND_API_URL
-    const backendUrl = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-    
-    let fetchUrl: string;
-    if (backendUrl) {
-      // External backend deployment
-      fetchUrl = `${backendUrl.replace(/\/$/, '')}/api/opennote/journal/export`;
-    } else {
-      // Same deployment - construct URL from request host
-      // In Next.js, Pages Router API routes are accessible from App Router on the same host
-      const url = new URL(request.url);
-      const protocol = process.env.VERCEL_URL ? 'https' : url.protocol;
-      const host = request.headers.get('host') || url.host;
-      fetchUrl = `${protocol}//${host}/api/opennote/journal/export`;
-    }
-
-    try {
-      const response = await fetch(fetchUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ sessionId }),
-      });
-
-      // Check if response is OK before parsing
-      if (!response.ok) {
-        let errorMessage = "Failed to export journal"
-        const contentType = response.headers.get("content-type")
-        
-        if (contentType && contentType.includes("application/json")) {
-          try {
-            const errorData = await response.json()
-            errorMessage = errorData.error || errorData.message || errorMessage
-          } catch {
-            errorMessage = await response.text() || errorMessage
-          }
-        } else {
-          errorMessage = await response.text() || errorMessage
-        }
-        
-        return corsJson(
-          { error: errorMessage },
-          { status: response.status }
-        );
+    if (!supabaseAdmin) {
+      const missingVars = [];
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL) missingVars.push('NEXT_PUBLIC_SUPABASE_URL');
+      if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        missingVars.push('NEXT_PUBLIC_SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY');
       }
-
-      // Parse JSON only if response is OK
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        return corsJson(
-          { error: `Expected JSON but got ${contentType || 'text/plain'}. Response: ${text.substring(0, 200)}` },
-          { status: 500 }
-        );
-      }
-
-      let data
-      try {
-        data = await response.json()
-      } catch (parseError: any) {
-        const text = await response.text()
-        return corsJson(
-          { error: `Failed to parse JSON response: ${parseError.message}. Response: ${text.substring(0, 200)}` },
-          { status: 500 }
-        );
-      }
-
-      return corsJson(data);
-    } catch (fetchError: any) {
-      // If fetch fails, it means backend route doesn't exist or isn't accessible
+      
+      console.error('Supabase not configured. Missing:', missingVars);
       return corsJson(
-        { error: `Failed to reach backend: ${fetchError.message}. Make sure backend server is running or set BACKEND_API_URL.` },
-        { status: 503 }
+        { 
+          error: "Supabase not configured. Missing environment variables: " + missingVars.join(', '),
+          details: "Please set NEXT_PUBLIC_SUPABASE_URL and at least one key (NEXT_PUBLIC_SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY) in .env.local"
+        },
+        { status: 500 }
       );
     }
+
+    // Fetch session data from Supabase
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from('sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError || !session) {
+      console.error('Error fetching session:', sessionError);
+      return corsJson({ error: 'Session not found' }, { status: 404 });
+    }
+
+    // Fetch events from Supabase
+    const { data: events, error: eventsError } = await supabaseAdmin
+      .from('events')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('ts', { ascending: true });
+
+    if (eventsError) {
+      console.error('Error fetching events:', eventsError);
+      return corsJson({ error: eventsError.message }, { status: 500 });
+    }
+
+    // Fetch analysis (optional - use heuristic fallback if missing)
+    const { data: analysis } = await supabaseAdmin
+      .from('analysis')
+      .select('summary_json')
+      .eq('session_id', sessionId)
+      .single();
+
+    // Use analysis if available, otherwise use safe defaults
+    const analysisData = analysis?.summary_json || getSafeDefaultAnalysis();
+
+    // Generate markdown
+    const sessionData = {
+      session: {
+        id: session.id,
+        started_at: session.started_at,
+        ended_at: session.ended_at,
+        intent_text: session.intent_text
+      },
+      events: events || [],
+      analysis: analysisData
+    };
+
+    const markdown = generateSessionMarkdown(sessionData);
+    const title = `FocusForge — Session ${sessionId.slice(0, 8)}`;
+
+    // Export to Opennote
+    let journalResult;
+    try {
+      journalResult = await importJournalToOpennote(markdown, title);
+    } catch (opennoteError: any) {
+      console.error('Opennote export error:', opennoteError);
+      return corsJson(
+        {
+          error: 'Failed to export to Opennote',
+          details: opennoteError.message
+        },
+        { status: 500 }
+      );
+    }
+
+    // Store export record (optional - log but don't fail)
+    try {
+      await supabaseAdmin
+        .from('opennote_exports')
+        .insert({
+          session_id: sessionId,
+          journal_id: journalResult.journalId,
+          journal_url: journalResult.url || null
+        });
+    } catch (err) {
+      // Log but don't fail - export succeeded
+      console.error('Error storing export record:', err);
+    }
+
+    return corsJson({
+      ok: true,
+      journalId: journalResult.journalId,
+      journalUrl: journalResult.url
+    });
   } catch (error: any) {
     console.error("Opennote journal export error:", error);
+    console.error("Error stack:", error.stack);
     return corsJson(
       { error: error.message || "Internal server error" },
       { status: 500 }

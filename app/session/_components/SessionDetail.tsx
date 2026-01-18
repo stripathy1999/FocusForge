@@ -118,8 +118,12 @@ function TimeBreakdownPie({
   formatDuration: (s?: number) => string;
 }) {
   const [hovered, setHovered] = useState<{ label: string; pct: number } | null>(null);
-  const total = segments.reduce((s, i) => s + i.timeSec, 0);
-  if (total <= 0) {
+  
+  // Filter out segments with zero or negative time
+  const validSegments = segments.filter((seg) => seg.timeSec > 0);
+  const total = validSegments.reduce((s, i) => s + i.timeSec, 0);
+  
+  if (total <= 0 || validSegments.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3">
         <div className="flex h-[140px] w-[140px] items-center justify-center rounded-full bg-zinc-100">
@@ -134,18 +138,21 @@ function TimeBreakdownPie({
   const R = 52;
   const r = 34;
   const outlineWidth = 2; // outline between segments
-  let cumulativeAngle = 0;
+  let cumulativeAngle = -Math.PI / 2; // Start at top (12 o'clock)
 
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative h-[140px] w-[140px] shrink-0">
         <svg
           viewBox="0 0 120 120"
+          width="140"
+          height="140"
           className="h-full w-full"
           role="img"
           aria-label="Time breakdown by category"
+          style={{ display: 'block' }}
         >
-          {segments.map((seg, i) => {
+          {validSegments.map((seg, i) => {
             const fraction = Math.max(0, seg.timeSec / total);
             const pct = total > 0 ? Math.round((seg.timeSec / total) * 100) : 0;
             const a1 = cumulativeAngle;
@@ -159,18 +166,32 @@ function TimeBreakdownPie({
             const y = (rad: number) => cy + R * Math.sin(rad);
             const xi = (rad: number) => cx + r * Math.cos(rad);
             const yi = (rad: number) => cy + r * Math.sin(rad);
-            const large = a2 - a1 >= Math.PI ? 1 : 0;
-            const d =
-              `M ${x(a1)} ${y(a1)}` +
-              ` A ${R} ${R} 0 ${large} 1 ${x(a2)} ${y(a2)}` +
-              ` L ${xi(a2)} ${yi(a2)}` +
-              ` A ${r} ${r} 0 ${large} 0 ${xi(a1)} ${yi(a1)} Z`;
+            
+            // Handle full circle case (single segment or 100% segment)
+            let d: string;
+            if (Math.abs(fraction - 1) < 0.0001 || validSegments.length === 1) {
+              // Full circle - draw complete donut by going almost all the way around
+              const a2_adjusted = a1 + 2 * Math.PI - 0.001;
+              d =
+                `M ${x(a1)} ${y(a1)}` +
+                ` A ${R} ${R} 0 1 1 ${x(a2_adjusted)} ${y(a2_adjusted)}` +
+                ` L ${xi(a2_adjusted)} ${yi(a2_adjusted)}` +
+                ` A ${r} ${r} 0 1 0 ${xi(a1)} ${yi(a1)} Z`;
+            } else {
+              const large = a2 - a1 >= Math.PI ? 1 : 0;
+              d =
+                `M ${x(a1)} ${y(a1)}` +
+                ` A ${R} ${R} 0 ${large} 1 ${x(a2)} ${y(a2)}` +
+                ` L ${xi(a2)} ${yi(a2)}` +
+                ` A ${r} ${r} 0 ${large} 0 ${xi(a1)} ${yi(a1)} Z`;
+            }
+            
             return (
               <path
                 key={`${seg.label}-${i}`}
                 d={d}
                 fill={color}
-                stroke="#e4e4e7"
+                stroke="#ffffff"
                 strokeWidth={outlineWidth}
                 strokeLinejoin="round"
                 className="cursor-pointer transition-opacity hover:opacity-90"
@@ -194,7 +215,7 @@ function TimeBreakdownPie({
         )}
       </div>
       <div className="w-full space-y-1.5">
-        {segments.map((seg, i) => {
+        {validSegments.map((seg, i) => {
           const isBreak = seg.label.toLowerCase().includes("break");
           const color = isBreak
             ? PIE_BREAK_COLOR
@@ -233,6 +254,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [shakeTimelineTab, setShakeTimelineTab] = useState(false);
   const [shakeResumeButton, setShakeResumeButton] = useState(false);
+  const [hoveredAlignment, setHoveredAlignment] = useState<{ label: string; pct: number } | null>(null);
   const keyTimeline = showFullTimeline
     ? timeline
     : buildKeyTimeline(timeline, computedSummary.lastStop?.ts);
@@ -364,11 +386,19 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: session.id }),
       });
+      
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Server returned HTML instead of JSON. Response: ${text.substring(0, 200)}`);
+      }
+      
       const data = await response.json();
       if (response.ok && data.ok) {
         setJournalUrl(data.journalUrl || `https://opennote.com/journal/${data.journalId}`);
       } else {
-        setExportError(data.error || 'Failed to export journal');
+        setExportError(data.error || data.details || 'Failed to export journal');
       }
     } catch (error: any) {
       setExportError(error.message || 'Failed to export journal');
@@ -406,32 +436,44 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               </h1>
               <div className="flex flex-wrap items-center gap-2 text-xs" style={{ fontFamily: 'var(--font-lato), sans-serif', color: '#8f8f9f' }}>
                 <span>Session ID:</span>
-                <code
-                  className="rounded px-2 py-0.5 text-[11px] font-medium"
-                  style={{ 
-                    backgroundColor: '#9ED5FF', 
-                    color: '#32578E',
-                    fontFamily: 'var(--font-lato), sans-serif'
-                  }}
-                  title={session.id}
-                >
-                  {shortSessionId}
-                </code>
                 <button
                   type="button"
-                  className="text-xs transition-colors hover:opacity-80"
+                  className="rounded px-2 py-0.5 text-[11px] font-medium cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105"
                   style={{ 
-                    color: '#4777B9',
+                    backgroundColor: copiedItem === `session-${session.id}` ? '#22c55e' : '#9ED5FF', 
+                    color: copiedItem === `session-${session.id}` ? 'white' : '#32578E',
                     fontFamily: 'var(--font-lato), sans-serif'
                   }}
+                  title={copiedItem === `session-${session.id}` ? "Copied!" : "Click to copy session ID"}
                   onClick={() => {
                     navigator.clipboard.writeText(session.id);
                     setCopiedItem(`session-${session.id}`);
-                    setTimeout(() => setCopiedItem(null), 1500);
+                    setTimeout(() => setCopiedItem(null), 2000);
                   }}
-                  title="Copy session id"
                 >
-                  {copiedItem === `session-${session.id}` ? "Copied" : "Copy"}
+                  {copiedItem === `session-${session.id}` ? (
+                    <span className="flex items-center gap-1">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        style={{ color: "white" }}
+                      >
+                        <path
+                          d="M3 8L6 11L13 4"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      Copied!
+                    </span>
+                  ) : (
+                    shortSessionId
+                  )}
                 </button>
               </div>
               <div className="flex flex-wrap gap-3 text-sm text-zinc-600">
@@ -688,7 +730,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   )}
                   <div className="mt-4">
                     <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
-                      Review top 3 pages visited
+                      Top Pages Visited
                     </p>
                     <ul className="mt-2 list-disc pl-5 text-sm">
                       {(computedSummary.topPages ?? []).length === 0 ? (
@@ -709,45 +751,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         ))
                       )}
                     </ul>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
-                      Next actions:
-                    </p>
-                    <div className="text-sm text-zinc-600">
-                    <ul className="mt-2 list-disc pl-5">
-                      {heuristic.nextActions.map((item) => {
-                        const isReviewTabs = item === "Review your recent tabs";
-                        const isContinue = item === "Continue where you left off";
-                        return (
-                          <li 
-                            key={item}
-                            onClick={() => {
-                              if (isReviewTabs) {
-                                setActiveTab("timeline");
-                              } else if (isContinue && computedSummary.resumeUrls.length > 0) {
-                                handleReopen(computedSummary.resumeUrls);
-                              }
-                            }}
-                            className={isReviewTabs || isContinue ? "cursor-pointer" : ""}
-                          >
-                            {isReviewTabs ? (
-                              <>
-                                Review your{" "}
-                                <span style={{ color: '#4777B9', fontFamily: 'var(--font-jura), sans-serif' }}>recent tabs</span>
-                              </>
-                            ) : isContinue ? (
-                              <>
-                                <span style={{ color: '#4777B9', fontFamily: 'var(--font-jura), sans-serif' }}>Continue</span> where you left off
-                              </>
-                            ) : (
-                              item
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    </div>
                   </div>
                 </div>
               )}
@@ -798,11 +801,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <div className="text-base font-medium text-zinc-600" style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
                       Time split across different activities
                     </div>
-                  ) : computedSummary.focus.tooShort ? (
-                    <div className="text-base font-semibold font-jura text-zinc-900">
-                      Not enough data yet — keep going for focus insights.
-                    </div>
-                  ) : (
+                  ) : !computedSummary.focus.tooShort && (
                     <div className="text-3xl font-semibold font-jura text-zinc-900">
                       {computedSummary.focus.displayFocusPct}% Aligned
                     </div>
@@ -815,56 +814,87 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     const total = a + o + n + u;
                     const pctA = total > 0 ? (a / total) * 100 : 0;
                     const pctO = total > 0 ? (o / total) * 100 : 0;
-                    const pctN = total > 0 ? (n / total) * 100 : 100;
+                    const pctN = total > 0 ? (n / total) * 100 : 0;
                     const pctU = total > 0 ? (u / total) * 100 : 0;
+                    const roundedPctA = Math.round(pctA);
+                    const roundedPctO = Math.round(pctO);
+                    const roundedPctN = Math.round(pctN);
+                    const roundedPctU = Math.round(pctU);
                     return (
                       <div className="mt-3 space-y-2.5">
                         <div
-                          className="flex min-h-[12px] w-full overflow-hidden rounded-full bg-zinc-200"
+                          className="relative min-h-[12px] w-full overflow-hidden rounded-full bg-zinc-200"
                           role="img"
                           aria-label={`Aligned ${formatDuration(a)}, Off-intent ${formatDuration(o)}, Neutral ${formatDuration(n)}, Unknown ${formatDuration(u)}`}
                         >
                           {total > 0 ? (
                             <>
-                              <div
-                                className="h-full shrink-0"
-                                style={{
-                                  flex: `0 0 ${pctA}%`,
-                                  backgroundColor: "#32578E",
-                                  minWidth: a > 0 ? "2px" : undefined,
-                                }}
-                                title={`Aligned: ${formatDuration(a)}`}
-                              />
-                              <div
-                                className="h-full shrink-0"
-                                style={{
-                                  flex: `0 0 ${pctO}%`,
-                                  backgroundColor: "#4a7fc4",
-                                  minWidth: o > 0 ? "2px" : undefined,
-                                }}
-                                title={`Off-intent: ${formatDuration(o)}`}
-                              />
-                              <div
-                                className="h-full shrink-0"
-                                style={{
-                                  flex: `0 0 ${pctN}%`,
-                                  backgroundColor: "#94a3b8",
-                                  minWidth: n > 0 ? "2px" : undefined,
-                                }}
-                                title={`Neutral: ${formatDuration(n)}`}
-                              />
-                              <div
-                                className="h-full shrink-0"
-                                style={{
-                                  flex: `0 0 ${pctU}%`,
-                                  backgroundColor: "#cbd5f5",
-                                  minWidth: u > 0 ? "2px" : undefined,
-                                }}
-                                title={`Unknown: ${formatDuration(u)}`}
-                              />
+                              {a > 0 && (
+                                <div
+                                  className="absolute left-0 top-0 h-full cursor-pointer transition-opacity hover:opacity-90"
+                                  style={{
+                                    width: `${pctA}%`,
+                                    backgroundColor: "#32578E",
+                                    minWidth: pctA < 1 ? "2px" : undefined,
+                                  }}
+                                  title={`Aligned: ${formatDuration(a)}`}
+                                  onMouseEnter={() => setHoveredAlignment({ label: "Aligned", pct: roundedPctA })}
+                                  onMouseLeave={() => setHoveredAlignment(null)}
+                                />
+                              )}
+                              {o > 0 && (
+                                <div
+                                  className="absolute top-0 h-full cursor-pointer transition-opacity hover:opacity-90"
+                                  style={{
+                                    left: `${pctA}%`,
+                                    width: `${pctO}%`,
+                                    backgroundColor: "#4a7fc4",
+                                    minWidth: pctO < 1 ? "2px" : undefined,
+                                  }}
+                                  title={`Off-intent: ${formatDuration(o)}`}
+                                  onMouseEnter={() => setHoveredAlignment({ label: "Off-intent", pct: roundedPctO })}
+                                  onMouseLeave={() => setHoveredAlignment(null)}
+                                />
+                              )}
+                              {n > 0 && (
+                                <div
+                                  className="absolute top-0 h-full cursor-pointer transition-opacity hover:opacity-90"
+                                  style={{
+                                    left: `${pctA + pctO}%`,
+                                    width: `${pctN}%`,
+                                    backgroundColor: "#94a3b8",
+                                  }}
+                                  title={`Neutral: ${formatDuration(n)}`}
+                                  onMouseEnter={() => setHoveredAlignment({ label: "Neutral", pct: roundedPctN })}
+                                  onMouseLeave={() => setHoveredAlignment(null)}
+                                />
+                              )}
+                              {u > 0 && (
+                                <div
+                                  className="absolute top-0 h-full cursor-pointer transition-opacity hover:opacity-90"
+                                  style={{
+                                    left: `${pctA + pctO + pctN}%`,
+                                    width: `${pctU}%`,
+                                    backgroundColor: "#cbd5f5",
+                                  }}
+                                  title={`Unknown: ${formatDuration(u)}`}
+                                  onMouseEnter={() => setHoveredAlignment({ label: "Unknown", pct: roundedPctU })}
+                                  onMouseLeave={() => setHoveredAlignment(null)}
+                                />
+                              )}
+                              {hoveredAlignment && (
+                                <div
+                                  className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                                  aria-hidden
+                                >
+                                  <span className="rounded-md bg-white px-2.5 py-1 text-sm font-medium text-zinc-800 shadow-md ring-1 ring-zinc-200/80">
+                                    {hoveredAlignment.label}: {hoveredAlignment.pct}%
+                                  </span>
+                                </div>
+                              )}
                             </>
                           ) : (
-                            <div className="h-full min-h-[12px] w-full flex-1" style={{ backgroundColor: "#9ED5FF" }} />
+                            <div className="h-full min-h-[12px] w-full" style={{ backgroundColor: "#9ED5FF" }} />
                           )}
                         </div>
                         <div className="flex flex-nowrap gap-x-3 text-xs text-zinc-600">
@@ -1304,63 +1334,40 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-base font-semibold" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                  <span className="text-base font-semibold flex-shrink-0" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                                     {task.title}
                                   </span>
-                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                    task.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                    task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-blue-100 text-blue-700'
-                                  }`}>
-                                    {task.priority}
+                                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border whitespace-nowrap flex-shrink-0 ${
+                                    task.priority === 'high' ? 'bg-red-100 text-red-700 border-red-300' :
+                                    task.priority === 'medium' ? 'bg-yellow-200 text-yellow-900 border-yellow-400 border-2' :
+                                    'bg-blue-100 text-blue-700 border-blue-300'
+                                  }`} style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
+                                    Priority: {task.priority}
                                   </span>
-                                  {task.urgency && (
-                                    <span className={`px-2 py-1 text-xs rounded-full ${
-                                      task.urgency === 'urgent' ? 'bg-orange-100 text-orange-700' :
-                                      task.urgency === 'soon' ? 'bg-amber-100 text-amber-700' :
-                                      'bg-gray-100 text-gray-700'
-                                    }`}>
-                                      {task.urgency}
-                                    </span>
-                                  )}
                                 </div>
-                                {task.reason && (
-                                  <p className="text-sm text-zinc-600 mb-2">{task.reason}</p>
+                                {(task.description || task.reason) && (
+                                  <p className="text-sm text-zinc-600 mb-2">
+                                    {task.description || task.reason}
+                                  </p>
                                 )}
                                 {task.context && (
                                   <p className="text-xs text-zinc-500 italic">{task.context}</p>
                                 )}
                                 {task.estimatedTime && (
                                   <p className="text-xs text-zinc-500 mt-2">
-                                    ⏱️ Estimated: {task.estimatedTime}
+                                    Estimated: {task.estimatedTime}
                                   </p>
                                 )}
                                 {task.dependencies && task.dependencies.length > 0 && (
                                   <p className="text-xs text-zinc-500 mt-1">
-                                    🔗 Depends on: {task.dependencies.join(', ')}
+                                    Depends on: {task.dependencies.join(', ')}
                                   </p>
                                 )}
                               </div>
                             </div>
                           </div>
                         ))}
-                        
-                        {taskSuggestions.length > 0 && (
-                          <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
-                            <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
-                              Strategic Suggestions
-                            </h3>
-                            <ul className="space-y-2">
-                              {taskSuggestions.map((suggestion: string, i: number) => (
-                                <li key={i} className="text-sm text-zinc-700 flex items-start gap-2">
-                                  <span className="text-[#4777B9] mt-1">•</span>
-                                  <span>{suggestion}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
                       </>
                     )}
                   </div>

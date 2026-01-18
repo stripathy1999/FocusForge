@@ -128,29 +128,49 @@ export async function importJournalToOpennote(
     throw new Error('OPENNOTE_API_KEY environment variable is not set')
   }
 
-  const response = await fetch(`${apiUrl}/v1/journals/editor/import_from_markdown`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({ markdown, title })
-  })
+  try {
+    const response = await fetch(`${apiUrl}/v1/journals/editor/import_from_markdown`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({ markdown, title })
+    })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Opennote API error: ${response.status} ${errorText}`)
-  }
+    if (!response.ok) {
+      let errorText = ''
+      try {
+        errorText = await response.text()
+      } catch {
+        errorText = `HTTP ${response.status} ${response.statusText}`
+      }
+      
+      // Check if response is HTML (error page)
+      const contentType = response.headers.get('content-type') || ''
+      if (contentType.includes('text/html')) {
+        throw new Error(`Opennote API returned HTML error page (${response.status}). Check API URL: ${apiUrl}`)
+      }
+      
+      throw new Error(`Opennote API error: ${response.status} ${errorText.substring(0, 200)}`)
+    }
 
-  const contentType = response.headers.get('content-type')
-  if (!contentType || !contentType.includes('application/json')) {
-    const text = await response.text()
-    throw new Error(`Expected JSON response, got ${contentType}: ${text.substring(0, 200)}`)
-  }
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.includes('application/json')) {
+      const text = await response.text()
+      throw new Error(`Expected JSON response, got ${contentType}: ${text.substring(0, 200)}`)
+    }
 
-  const data = await response.json()
-  return { 
-    journalId: data.journal_id || data.id || '', 
-    url: data.journal_url || data.url 
+    const data = await response.json()
+    return { 
+      journalId: data.journal_id || data.id || '', 
+      url: data.journal_url || data.url 
+    }
+  } catch (error: any) {
+    // Re-throw with more context if it's a fetch/network error
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error(`Failed to connect to Opennote API at ${apiUrl}. Check OPENNOTE_API_URL environment variable.`)
+    }
+    throw error
   }
 }

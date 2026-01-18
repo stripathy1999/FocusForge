@@ -82,6 +82,35 @@ export default async function handler(
 }
 
 /**
+ * Generate a description for a task based on its title.
+ */
+function generateTaskDescription(title: string): string {
+  const lowerTitle = title.toLowerCase()
+  
+  if (lowerTitle.includes('resume') || lowerTitle.includes('open last stop')) {
+    return 'Press the "Resume Session" button to reopen the tab or workspace where you left off and continue your work seamlessly.'
+  }
+  if (lowerTitle.includes('continue in') || lowerTitle.includes('workspace')) {
+    return 'Press the "Resume Session" button or use "Continue where you left off" to return to the workspace you were actively using.'
+  }
+  if (lowerTitle.includes('review') && lowerTitle.includes('pages')) {
+    return 'Review the most visited pages from your session to identify key resources and information you were working with.'
+  }
+  if (lowerTitle.includes('review') && lowerTitle.includes('tabs')) {
+    return 'Go through your recent tabs to see what you were working on and identify any unfinished tasks.'
+  }
+  if (lowerTitle.includes('decide:')) {
+    return 'Make a decision on this item based on the context from your session and your current priorities.'
+  }
+  if (lowerTitle.includes('complete') || lowerTitle.includes('finish')) {
+    return 'Complete this task that was started during your session to maintain momentum and avoid losing context.'
+  }
+  
+  // Default description
+  return `Work on this task based on your session activity and current priorities.`
+}
+
+/**
  * Create a basic task plan from analysis (fallback).
  */
 function createBasicTaskPlan(analysis: any): any {
@@ -101,6 +130,7 @@ function createBasicTaskPlan(analysis: any): any {
       urgency: 'soon',
       estimatedTime: '30 minutes',
       dependencies: [],
+      description: generateTaskDescription(action),
       reason: 'Suggested from session analysis',
       context: ''
     })
@@ -110,13 +140,15 @@ function createBasicTaskPlan(analysis: any): any {
   // Add pending decisions
   pendingDecisions.slice(0, 3).forEach((decision: string, i: number) => {
     const taskId = `decision_${i + 1}`
+    const title = `Decide: ${decision}`
     tasks.push({
       id: taskId,
-      title: `Decide: ${decision}`,
+      title: title,
       priority: 'high',
       urgency: 'soon',
       estimatedTime: '15 minutes',
       dependencies: [],
+      description: generateTaskDescription(title),
       reason: 'Pending decision from session',
       context: ''
     })
