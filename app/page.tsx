@@ -11,7 +11,7 @@ export default function Home() {
     >
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <header className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center gap-3">
             <Image
               src="/focus_forge_logo.png"
               alt="FocusForge"
@@ -30,7 +30,7 @@ export default function Home() {
             </h1>
           </div>
           <h2
-            className="mt-4 text-3xl font-semibold"
+            className="mt-4 text-center text-3xl font-semibold"
             style={{
               fontFamily: "var(--font-jura), sans-serif",
               color: "#669EE6",
@@ -38,12 +38,12 @@ export default function Home() {
           >
             Auto-track browser sessions and resume faster.
           </h2>
-          <p className="mt-4 max-w-2xl text-sm" style={{ color: "#8f8f9f" }}>
+          <p className="mx-auto mt-4 max-w-2xl text-center text-sm" style={{ color: "#8f8f9f" }}>
             FocusForge only captures the active tab&apos;s URL, title, and
             timestamps. No page content, no keystrokes, and no personal data
             beyond what your browser already exposes.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link
               href="/session/live"
               className="rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm"
