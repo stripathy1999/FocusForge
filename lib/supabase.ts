@@ -4,15 +4,27 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Enable if we have URL and at least one key (anon or service)
-export const supabaseEnabled = Boolean(supabaseUrl && (supabaseAnonKey || supabaseServiceKey));
+// Validate URL format (must be a valid HTTP/HTTPS URL)
+function isValidUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
-export const supabase = supabaseEnabled && supabaseAnonKey
+// Enable if we have valid URL and at least one key (anon or service)
+const hasValidUrl = isValidUrl(supabaseUrl);
+export const supabaseEnabled = Boolean(hasValidUrl && (supabaseAnonKey || supabaseServiceKey));
+
+export const supabase = supabaseEnabled && supabaseAnonKey && hasValidUrl
   ? createClient(supabaseUrl as string, supabaseAnonKey as string)
   : null;
 
 // For admin operations (bypasses RLS) - prefer service role key, fallback to anon key
-export const supabaseAdmin = supabaseEnabled && supabaseUrl
+export const supabaseAdmin = supabaseEnabled && hasValidUrl && (supabaseServiceKey || supabaseAnonKey)
   ? createClient(
       supabaseUrl as string,
       supabaseServiceKey || supabaseAnonKey || '',
