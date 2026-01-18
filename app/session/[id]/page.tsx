@@ -52,7 +52,7 @@ export default async function SessionPage({
           </p>
           <Link
             href="/session/live"
-            className="mt-4 inline-block rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm"
+            className="mt-4 inline-block cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90"
             style={{
               fontFamily: "var(--font-jura), sans-serif",
               backgroundColor: "#32578E",

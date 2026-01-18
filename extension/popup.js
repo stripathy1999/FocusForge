@@ -372,14 +372,29 @@ copySessionIdBtn?.addEventListener("click", async () => {
       await navigator.clipboard.writeText(sessionId);
       const originalTitle = copySessionIdBtn.title;
       copySessionIdBtn.title = "Copied!";
-      // Visual feedback - change icon color temporarily
+      
+      // Replace copy icon with checkmark
       const svg = copySessionIdBtn.querySelector("svg");
       if (svg) {
-        const originalColor = svg.style.color;
-        svg.style.color = "#22c55e"; // green color for confirmation
+        const originalSVG = svg.outerHTML;
+        svg.outerHTML = `
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #22c55e">
+            <path
+              d="M3 8L6 11L13 4"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        `;
+        
         setTimeout(() => {
           copySessionIdBtn.title = originalTitle;
-          svg.style.color = originalColor;
+          const currentSvg = copySessionIdBtn.querySelector("svg");
+          if (currentSvg) {
+            currentSvg.outerHTML = originalSVG;
+          }
         }, 2000);
       } else {
         setTimeout(() => {

@@ -47,7 +47,7 @@ export default function Home() {
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
                 href="/session/live"
-                className="rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm"
+                className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90"
                 style={{
                   fontFamily: "var(--font-jura), sans-serif",
                   backgroundColor: "#32578E",
@@ -58,7 +58,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/session/demo"
-                className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-zinc-100"
+                className="cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition-all duration-200 hover:bg-zinc-100 hover:scale-105 hover:shadow-md"
                 style={{
                   fontFamily: "var(--font-jura), sans-serif",
                   color: "#32578E",
