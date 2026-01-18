@@ -362,50 +362,91 @@ function alignmentForDomain(
   if (intentTags.length === 0) {
     return "neutral";
   }
+  const normalizedIntent = intentTags.join(" ").toLowerCase();
+  const intentCategories = inferIntentCategories(intentTags);
+  const domainCategory = getDomainCategory(domain.domain);
 
-  const normalized = intentTags.join(" ").toLowerCase();
-  const mode = inferIntentMode(normalized);
-
-  if (mode === "relax") {
-    if (domain.type === "drift") {
-      return "aligned";
-    }
-    if (domain.type === "primary") {
-      return "off-intent";
-    }
+  if (!intentCategories.size) {
     return "neutral";
   }
 
-  if (mode === "content") {
-    if (domain.domain === "youtube.com" || domain.domain === "music.youtube.com") {
-      return "aligned";
-    }
-    if (domain.domain === "netflix.com") {
-      return "off-intent";
-    }
-    return "neutral";
-  }
-
-  if (domain.type === "primary") {
+  if (
+    normalizedIntent.includes(domain.domain) ||
+    normalizedIntent.includes(domain.label.toLowerCase())
+  ) {
     return "aligned";
   }
-  if (domain.type === "drift") {
-    return "off-intent";
+
+  if (domainCategory && intentCategories.has(domainCategory)) {
+    return "aligned";
   }
-  return "neutral";
+
+  if (!domainCategory) {
+    return "neutral";
+  }
+
+  if (domainCategory === "comms" || domainCategory === "dev_tools") {
+    return "neutral";
+  }
+
+  return "off-intent";
 }
 
-function inferIntentMode(intent: string): "relax" | "content" | "general" {
-  const relaxHints = ["relax", "unwind", "break", "chill", "rest"];
-  const contentHints = ["video", "edit", "youtube", "content", "stream"];
+const DOMAIN_CATEGORY_MAP: Record<string, string> = {
+  "leetcode.com": "interview_prep",
+  "educative.io": "interview_prep",
+  "hellointerview.com": "interview_prep",
+  "docs.google.com": "docs_writing",
+  "docs.opennote.com": "docs_writing",
+  "opennote.com": "docs_writing",
+  "youtube.com": "entertainment",
+  "music.youtube.com": "entertainment",
+  "netflix.com": "entertainment",
+  "primevideo.com": "entertainment",
+  "capcut.com": "video_editing",
+  "canva.com": "video_editing",
+  "adobe.com": "video_editing",
+  "descript.com": "video_editing",
+  "mail.google.com": "comms",
+  "supabase.com": "dev_tools",
+  "vercel.com": "dev_tools",
+  "github.com": "dev_tools",
+};
 
-  if (relaxHints.some((hint) => intent.includes(hint))) {
-    return "relax";
+const INTENT_KEYWORD_CATEGORIES: Record<string, string[]> = {
+  video_editing: [
+    "video editing",
+    "capcut",
+    "premiere",
+    "after effects",
+    "video",
+    "edit",
+  ],
+  entertainment: ["entertainment", "netflix", "youtube", "movie", "music"],
+  interview_prep: ["system design", "leetcode", "interview", "oa", "dsa"],
+  docs_writing: ["slides", "docs", "writing", "notes", "document"],
+};
+
+function inferIntentCategories(intentTags: string[]): Set<string> {
+  const normalized = intentTags.join(" ").toLowerCase();
+  const categories = new Set<string>();
+  Object.entries(INTENT_KEYWORD_CATEGORIES).forEach(([category, keywords]) => {
+    if (keywords.some((keyword) => normalized.includes(keyword))) {
+      categories.add(category);
+    }
+  });
+  return categories;
+}
+
+function getDomainCategory(domain: string): string | null {
+  const normalized = domain.replace(/^www\./, "");
+  if (DOMAIN_CATEGORY_MAP[normalized]) {
+    return DOMAIN_CATEGORY_MAP[normalized];
   }
-  if (contentHints.some((hint) => intent.includes(hint))) {
-    return "content";
-  }
-  return "general";
+  const entry = Object.entries(DOMAIN_CATEGORY_MAP).find(([key]) =>
+    normalized.endsWith(`.${key}`),
+  );
+  return entry ? entry[1] : null;
 }
 
 function buildResumeUrls(

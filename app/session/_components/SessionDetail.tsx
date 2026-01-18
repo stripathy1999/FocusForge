@@ -249,6 +249,52 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const [exportError, setExportError] = useState<string | null>(null);
   const sessionTitle = buildSessionTitle(session, computedSummary);
   const shortSessionId = session.id.slice(0, 8);
+  const [dismissedMismatch, setDismissedMismatch] = useState(false);
+  const [intentUpdating, setIntentUpdating] = useState(false);
+  const [intentUpdateMessage, setIntentUpdateMessage] = useState<string | null>(
+    null,
+  );
+
+  const topWorkspace = computedSummary.domains[0];
+  const intentLabel =
+    computedSummary.intent_tags?.length > 0
+      ? computedSummary.intent_tags.join(", ")
+      : computedSummary.intent_raw || "your intent";
+  const offIntentShare =
+    computedSummary.focus.totalTimeSec > 0
+      ? computedSummary.focus.offIntentTimeSec /
+        computedSummary.focus.totalTimeSec
+      : 0;
+  const showMismatchPrompt =
+    !computedSummary.focus.intentMissing &&
+    offIntentShare >= 0.4 &&
+    Boolean(topWorkspace) &&
+    !dismissedMismatch;
+
+  const handleIntentUpdate = async (nextIntent: string) => {
+    try {
+      setIntentUpdating(true);
+      setIntentUpdateMessage(null);
+      const response = await fetch("/api/session/intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: session.id,
+          intent: nextIntent,
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Failed to update intent");
+      }
+      setIntentUpdateMessage(`Intent updated to: ${nextIntent}`);
+      setDismissedMismatch(true);
+    } catch (error: any) {
+      setIntentUpdateMessage(error?.message || "Failed to update intent");
+    } finally {
+      setIntentUpdating(false);
+    }
+  };
 
   useEffect(() => {
     const topWorkspaces = computedSummary.domains
@@ -469,6 +515,37 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   ) : (
                     <p className="mt-2 text-base text-zinc-600 text-center">No intent set.</p>
                   )}
+                  {showMismatchPrompt && topWorkspace && (
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      <p>
+                        Your intent was {intentLabel}, but your browsing was
+                        mostly {topWorkspace.label}. Pick correct intent?
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="rounded-full bg-amber-200 px-3 py-1 text-[11px] font-semibold text-amber-900 disabled:opacity-60"
+                          disabled={intentUpdating}
+                          onClick={() => handleIntentUpdate(topWorkspace.label)}
+                        >
+                          Update intent to: {topWorkspace.label}
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-full border border-amber-300 px-3 py-1 text-[11px] font-semibold text-amber-800 disabled:opacity-60"
+                          disabled={intentUpdating}
+                          onClick={() => setDismissedMismatch(true)}
+                        >
+                          Keep my intent
+                        </button>
+                      </div>
+                      {intentUpdateMessage && (
+                        <p className="mt-2 text-[11px] text-amber-900">
+                          {intentUpdateMessage}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               <div className="flex flex-col gap-2 mt-4">
                 <button
@@ -554,7 +631,30 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </p>
                   <div className="mt-4">
                     <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
-                      AI Summary
+                      Ground truth
+                    </p>
+                    <div className="space-y-1 text-sm text-zinc-700">
+                      <p>
+                        <span className="font-semibold">Most active workspace:</span>{" "}
+                        {topWorkspace ? (
+                          <>
+                            {topWorkspace.label} ({formatDuration(topWorkspace.timeSec)})
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Last stop:</span>{" "}
+                        {computedSummary.lastStop?.title ||
+                          computedSummary.lastStop?.url ||
+                          "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                      AI guess
                     </p>
                     <p className="text-base text-zinc-700">{computedSummary.resumeSummary}</p>
                   </div>
@@ -691,6 +791,9 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Intent Alignment
                 </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Based on domains visited (no content), FocusForge estimates…
+                </p>
                 <div className="mt-2 text-sm text-zinc-600">
                   {computedSummary.focus.intentMissing ? (
                     <div className="text-base font-medium text-zinc-600" style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
@@ -718,7 +821,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         <div
                           className="flex min-h-[12px] w-full overflow-hidden rounded-full bg-zinc-200"
                           role="img"
-                          aria-label={`Aligned ${formatDuration(a)}, Off-intent ${formatDuration(o)}, Neutral ${formatDuration(n)}`}
+                          aria-label={`Aligned ${formatDuration(a)}, Off-intent ${formatDuration(o)}, Unclassified ${formatDuration(n)}`}
                         >
                           {total > 0 ? (
                             <>
@@ -747,7 +850,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                   backgroundColor: "#94a3b8",
                                   minWidth: n > 0 ? "2px" : undefined,
                                 }}
-                                title={`Neutral: ${formatDuration(n)}`}
+                                title={`Unclassified: ${formatDuration(n)}`}
                               />
                             </>
                           ) : (
@@ -765,7 +868,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           </span>
                           <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
                             <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#94a3b8" }} />
-                            Neutral {formatDuration(n)}
+                            Unclassified {formatDuration(n)}
                           </span>
                         </div>
                       </div>

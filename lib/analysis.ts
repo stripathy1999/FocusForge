@@ -2,7 +2,7 @@ import { computeSummary } from "@/lib/grouping";
 import { getEvents, getSession, setAnalysis } from "@/lib/store";
 import { AnalysisResult } from "@/lib/types";
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash-lite";
 
 export async function runGeminiAnalysis(
   sessionId: string,
