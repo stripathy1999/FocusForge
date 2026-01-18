@@ -230,7 +230,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [taskSuggestions, setTaskSuggestions] = useState<string[]>([]);
-  const [taskInsights, setTaskInsights] = useState<string[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const keyTimeline = showFullTimeline
     ? timeline
@@ -243,9 +242,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   
   // Opennote export state
   const [exportingJournal, setExportingJournal] = useState(false);
-  const [exportingPractice, setExportingPractice] = useState(false);
   const [journalUrl, setJournalUrl] = useState<string | null>(null);
-  const [practiceUrl, setPracticeUrl] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const sessionTitle = buildSessionTitle(session, computedSummary);
   const shortSessionId = session.id.slice(0, 8);
@@ -295,7 +292,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
           
           setTasks(orderedTasks);
           setTaskSuggestions(data.taskPlan.suggestions || []);
-          setTaskInsights(data.taskPlan.insights || []);
         }
       }
     } catch (error) {
@@ -329,29 +325,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
       setExportError(error.message || 'Failed to export journal');
     } finally {
       setExportingJournal(false);
-    }
-  };
-
-  const handleExportPractice = async () => {
-    setExportingPractice(true);
-    setExportError(null);
-    try {
-      const response = await fetch('/api/opennote/practice/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.id }),
-      });
-      const data = await response.json();
-      if (response.ok && data.ok) {
-        // Practice set is being generated, show success message
-        setPracticeUrl('pending');
-      } else {
-        setExportError(data.error || 'Failed to create practice set');
-      }
-    } catch (error: any) {
-      setExportError(error.message || 'Failed to create practice set');
-    } finally {
-      setExportingPractice(false);
     }
   };
 
@@ -512,34 +485,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#4777B9', borderColor: '#4777B9' }}
                   >
                     {exportingJournal ? 'Exporting...' : 'Export to Opennote Journal'}
-                  </button>
-                )}
-                
-                {practiceUrl === 'pending' ? (
-                  <div className="rounded-full px-4 py-2 text-base font-semibold text-center"
-                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#9ED5FF', color: '#32578E' }}
-                  >
-                    ⏳ Practice set generating...
-                  </div>
-                ) : practiceUrl ? (
-                  <a
-                    href={practiceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm text-center"
-                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#669EE6', borderColor: '#669EE6' }}
-                  >
-                    ✅ Practice Set Ready — Open in Opennote
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleExportPractice}
-                    disabled={exportingPractice}
-                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#669EE6', borderColor: '#669EE6' }}
-                  >
-                    {exportingPractice ? 'Generating...' : 'Generate Practice Problems (Opennote)'}
                   </button>
                 )}
                 
@@ -1239,22 +1184,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                 <li key={i} className="text-sm text-zinc-700 flex items-start gap-2">
                                   <span className="text-[#4777B9] mt-1">•</span>
                                   <span>{suggestion}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        
-                        {taskInsights.length > 0 && (
-                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                            <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}>
-                              Insights
-                            </h3>
-                            <ul className="space-y-2">
-                              {taskInsights.map((insight: string, i: number) => (
-                                <li key={i} className="text-sm text-zinc-600 flex items-start gap-2">
-                                  <span className="text-[#669EE6] mt-1">💡</span>
-                                  <span>{insight}</span>
                                 </li>
                               ))}
                             </ul>
