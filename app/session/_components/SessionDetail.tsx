@@ -599,7 +599,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   )}
                   <div className="mt-4">
                     <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
-                      Review top 3 pages visited
+                      Top Pages Visited
                     </p>
                     <ul className="mt-2 list-disc pl-5 text-sm">
                       {(computedSummary.topPages ?? []).length === 0 ? (
