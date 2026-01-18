@@ -28,32 +28,46 @@ async function sendTabActive(tab) {
   const state = await getState();
   const baseUrl = state.baseUrl || DEFAULT_BASE_URL;
 
-  const response = await fetch(`${baseUrl}/api/event`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sessionId: state.sessionId,
-      ts: Date.now(),
-      type: "TAB_ACTIVE",
-      url: tab.url,
-      title: tab.title || "",
-    }),
-  });
-  if (response.status === 409) {
-    await chrome.storage.local.set({
-      status: "auto_ended",
-      paused: false,
-      autoEndedSessionId: state.sessionId,
+  try {
+    const response = await fetch(`${baseUrl}/api/event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: state.sessionId,
+        ts: Date.now(),
+        type: "TAB_ACTIVE",
+        url: tab.url,
+        title: tab.title || "",
+      }),
     });
-    return;
-  }
+    
+    if (response.status === 409) {
+      await chrome.storage.local.set({
+        status: "auto_ended",
+        paused: false,
+        autoEndedSessionId: state.sessionId,
+      });
+      return;
+    }
 
-  await chrome.storage.local.set({
-    lastActiveTs: Date.now(),
-    lastTabId: tab.id,
-    lastUrl: tab.url,
-    lastTitle: tab.title || "",
-  });
+    if (!response.ok) {
+      console.warn(`FocusForge API error: ${response.status} ${response.statusText}`);
+      return;
+    }
+
+    await chrome.storage.local.set({
+      lastActiveTs: Date.now(),
+      lastTabId: tab.id,
+      lastUrl: tab.url,
+      lastTitle: tab.title || "",
+    });
+  } catch (error) {
+    // Silently handle network errors - the server might be offline or unreachable
+    // Only log if it's not a network error to avoid console spam
+    if (error.name !== "TypeError" || !error.message.includes("fetch")) {
+      console.error("FocusForge sendTabActive error", error);
+    }
+  }
 }
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
@@ -61,7 +75,10 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     const tab = await chrome.tabs.get(activeInfo.tabId);
     await sendTabActive(tab);
   } catch (error) {
-    console.error("FocusForge tab activation error", error);
+    // Only log errors that aren't network-related (sendTabActive handles those)
+    if (error.name !== "TypeError" || !error.message.includes("fetch")) {
+      console.error("FocusForge tab activation error", error);
+    }
   }
 });
 
@@ -77,7 +94,10 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     });
     await sendTabActive(tab);
   } catch (error) {
-    console.error("FocusForge window focus error", error);
+    // Only log errors that aren't network-related (sendTabActive handles those)
+    if (error.name !== "TypeError" || !error.message.includes("fetch")) {
+      console.error("FocusForge window focus error", error);
+    }
   }
 });
 

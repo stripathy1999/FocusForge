@@ -11,8 +11,18 @@
     "https://*.vercel.app/*",
     "https://YOUR_DEPLOYED_DOMAIN/*"
   ],
+  "icons": {
+    "16": "focus_forge_logo_nobackground.png",
+    "48": "focus_forge_logo_nobackground.png",
+    "128": "focus_forge_logo_nobackground.png"
+  },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "focus_forge_logo_nobackground.png",
+      "48": "focus_forge_logo_nobackground.png",
+      "128": "focus_forge_logo_nobackground.png"
+    }
   },
   "background": {
     "service_worker": "background.js"
