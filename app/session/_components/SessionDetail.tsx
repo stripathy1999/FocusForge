@@ -454,7 +454,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           key={`${event.ts}-${event.type}-${event.url || ''}-${index}`}
                           className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
                             event.url && event.type !== "BREAK"
-                              ? "hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
                               : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
                           }`}
                         >
@@ -532,7 +532,11 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       collapsedTimeline.map((item) => (
                         <div
                           key={item.key}
-                          className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
+                          className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
+                            item.type === "group" && item.url
+                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
+                          }`}
                         >
                           {item.type === "break" ? (
                             <div className="text-xs text-zinc-500">

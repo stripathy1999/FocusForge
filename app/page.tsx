@@ -74,7 +74,7 @@ export default function Home() {
             className="text-lg font-semibold"
             style={{
               fontFamily: "var(--font-jura), sans-serif",
-              color: "#32578E",
+              color: "#669EE6",
             }}
           >
             Recent Sessions

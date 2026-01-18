@@ -12,8 +12,14 @@ export default function LiveSessionPage() {
               Live Session
             </p>
             <h1 
-              className="mt-2 text-2xl font-semibold"
-              style={{ fontFamily: 'var(--font-jura), sans-serif' }}
+              className="mt-2 font-weight-900"
+              style={{ 
+                fontFamily: 'var(--font-jura), sans-serif',
+                color: '#0F2854',
+                fontWeight: 900,
+                fontSize: '1.5rem',
+                lineHeight: '2rem'
+              }}
             >
               Use the extension to start a session
             </h1>
