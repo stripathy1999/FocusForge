@@ -24,6 +24,16 @@ interface SessionData {
     nextActions?: string[]
     pendingDecisions?: string[]
     goalInferred?: string
+    mostActiveWorkspace?: { label: string; timeSec: number }
+    topPages?: Array<{ title?: string; url: string; domain?: string; timeSec?: number }>
+    alignment?: {
+      alignedSec: number
+      offIntentSec: number
+      neutralSec: number
+      unknownSec: number
+      alignedPct?: number
+    }
+    aiConfidence?: "high" | "medium" | "low"
   } | null
 }
 
@@ -34,84 +44,143 @@ interface SessionData {
 export function generateSessionMarkdown(data: SessionData): string {
   const { session, events, analysis } = data
   const startDate = new Date(session.started_at)
-  const dateStr = startDate.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
-    hour: 'numeric', 
-    minute: '2-digit' 
+  const dateStr = startDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
   })
 
-  let markdown = `# FocusForge — Session Recap (${dateStr})\n\n`
+  const intent = (session.intent_text || analysis?.goalInferred || "").trim()
+  const mostActive = analysis?.mostActiveWorkspace
+  const lastStop = analysis?.lastStop?.url
+    ? analysis.lastStop
+    : (events.length ? { label: events[events.length - 1].title || "Last visited page", url: events[events.length - 1].url } : null)
 
-  // Goal / Intent
-  if (session.intent_text) {
-    markdown += `## Goal / Intent\n\n${session.intent_text}\n\n`
-  } else if (analysis?.goalInferred) {
-    markdown += `## Goal / Intent\n\n${analysis.goalInferred}\n\n`
+  const workspaces = analysis?.workspaces || []
+  const topWorkspace = workspaces[0]
+  const topUrls = topWorkspace?.topUrls?.slice(0, 3) || []
+  const confidence = analysis?.aiConfidence || inferConfidence(analysis)
+
+  let md = `# FocusForge — Session Recap (${dateStr})\n\n`
+
+  // TL;DR
+  md += `## TL;DR\n\n`
+  if (topWorkspace?.label) {
+    md += `You mostly worked in **${topWorkspace.label}**. `
+  } else {
+    md += `Session recap from your recent browsing. `
+  }
+  if (lastStop?.label) md += `Last stop: **${lastStop.label}**.\n\n`
+  else md += `\n\n`
+
+  // Intent (user provided)
+  if (intent) {
+    md += `## Intent (what you said you wanted to do)\n\n${intent}\n\n`
   }
 
-  // Where you left off
-  if (analysis?.lastStop?.url) {
-    markdown += `## Where You Left Off\n\n`
-    markdown += `**${analysis.lastStop.label}**\n\n`
-    markdown += `${analysis.lastStop.url}\n\n`
-  } else if (events.length > 0) {
-    const lastEvent = events[events.length - 1]
-    markdown += `## Where You Left Off\n\n`
-    markdown += `**${lastEvent.title || 'Last visited page'}**\n\n`
-    markdown += `${lastEvent.url}\n\n`
+  // Ground Truth (deterministic)
+  md += `## Ground Truth (deterministic)\n\n`
+  if (mostActive?.label) {
+    md += `- **Most active workspace:** ${mostActive.label} (${formatTime(mostActive.timeSec)})\n`
+  } else if (topWorkspace?.label) {
+    md += `- **Most active workspace:** ${topWorkspace.label} (${formatTime(topWorkspace.timeSec)})\n`
   }
 
-  // What you did (top pages grouped by workspace)
-  if (analysis?.workspaces && analysis.workspaces.length > 0) {
-    markdown += `## What You Did\n\n`
-    analysis.workspaces.slice(0, 3).forEach(workspace => {
-      markdown += `### ${workspace.label}\n\n`
-      if (workspace.topUrls.length > 0) {
-        workspace.topUrls.slice(0, 5).forEach(url => {
-          markdown += `- ${url}\n`
-        })
-        markdown += `\n`
-      }
+  if (lastStop?.url) {
+    md += `- **Last stop:** [${lastStop.label}](${lastStop.url})\n`
+  }
+
+  // Top pages (best effort)
+  const pages = analysis?.topPages?.slice(0, 5)
+  if (pages?.length) {
+    md += `\n**Top pages visited:**\n`
+    pages.forEach(p => {
+      const title = (p.title || p.url).replace(/\n/g, " ").slice(0, 140)
+      md += `- [${title}](${p.url})\n`
     })
+  } else if (topUrls.length) {
+    md += `\n**Top pages visited:**\n`
+    topUrls.forEach((u) => md += `- ${u}\n`)
   }
+  md += `\n`
 
-  // Time breakdown
-  if (analysis?.workspaces && analysis.workspaces.length > 0) {
-    markdown += `## Time Breakdown\n\n`
-    analysis.workspaces.forEach(workspace => {
-      const minutes = Math.floor(workspace.timeSec / 60)
-      const seconds = workspace.timeSec % 60
-      const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
-      markdown += `- **${workspace.label}**: ${timeStr}\n`
+  // Time breakdown (clean)
+  if (workspaces.length) {
+    md += `## Time Breakdown\n\n`
+    workspaces.slice(0, 8).forEach(ws => {
+      md += `- **${ws.label}**: ${formatTime(ws.timeSec)}\n`
     })
-    markdown += `\n`
+    md += `\n`
   }
 
-  // AI summary
+  // Alignment (if available)
+  if (analysis?.alignment) {
+    const a = analysis.alignment
+    md += `## Intent Alignment\n\n`
+    md += `- Aligned: **${formatTime(a.alignedSec)}**\n`
+    md += `- Off-intent: **${formatTime(a.offIntentSec)}**\n`
+    md += `- Neutral: **${formatTime(a.neutralSec)}**\n`
+    md += `- Unknown: **${formatTime(a.unknownSec)}**\n\n`
+  }
+
+  // AI guess clearly labeled + confidence
   if (analysis?.resumeSummary) {
-    markdown += `## AI Summary\n\n${analysis.resumeSummary}\n\n`
+    md += `## AI Summary (guess)\n\n`
+    md += `**Confidence:** ${confidence.toUpperCase()}\n\n`
+    md += `${analysis.resumeSummary}\n\n`
   }
 
-  // Next actions
-  if (analysis?.nextActions && analysis.nextActions.length > 0) {
-    markdown += `## Next Actions\n\n`
-    analysis.nextActions.slice(0, 5).forEach(action => {
-      markdown += `- ${action}\n`
+  // Action Plan (make it executable)
+  md += `## Action Plan (next 10 minutes)\n\n`
+  const actions = (analysis?.nextActions || []).filter(Boolean)
+
+  if (actions.length) {
+    actions.slice(0, 3).forEach((action, i) => {
+      md += `### ${i + 1}) ${action}\n\n`
+      // Attach 1-2 relevant links from the most active workspace
+      const links = topWorkspace?.topUrls?.slice(0, 2) || []
+      if (links.length) {
+        md += `**Quick links:**\n`
+        links.forEach(l => md += `- ${l}\n`)
+        md += `\n`
+      }
+      md += `**Micro-step (10 min):** Do the smallest next step that moves this forward.\n\n`
     })
-    markdown += `\n`
+  } else {
+    // Honest fallback
+    md += `No reliable next actions were inferred (not enough signal).\n\n`
+    if (lastStop?.url) {
+      md += `**Do this now:** reopen your last stop -> [${lastStop.label}](${lastStop.url})\n\n`
+    }
   }
 
-  // Pending decisions
-  if (analysis?.pendingDecisions && analysis.pendingDecisions.length > 0) {
-    markdown += `## Pending Decisions\n\n`
-    analysis.pendingDecisions.slice(0, 3).forEach(decision => {
-      markdown += `- ${decision}\n`
-    })
-    markdown += `\n`
+  // Pending decisions (keep, but don't overdo)
+  const decisions = (analysis?.pendingDecisions || []).filter(Boolean)
+  if (decisions.length) {
+    md += `## Pending Decisions\n\n`
+    decisions.slice(0, 3).forEach(d => md += `- ${d}\n`)
+    md += `\n`
   }
 
-  return markdown
+  return md
+}
+
+function formatTime(timeSec: number) {
+  const m = Math.floor(timeSec / 60)
+  const s = timeSec % 60
+  return m > 0 ? `${m}m ${s}s` : `${s}s`
+}
+
+function inferConfidence(analysis?: any): "high" | "medium" | "low" {
+  const a = analysis?.alignment
+  if (!a) return "medium"
+  const total = (a.alignedSec || 0) + (a.offIntentSec || 0) + (a.neutralSec || 0) + (a.unknownSec || 0)
+  if (!total) return "low"
+  const unknownPct = (a.unknownSec || 0) / total
+  if (unknownPct > 0.5) return "low"
+  if (unknownPct > 0.25) return "medium"
+  return "high"
 }
 
 /**
