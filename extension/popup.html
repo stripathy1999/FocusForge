@@ -217,11 +217,44 @@
         opacity: 0.6;
       }
 
+      .session-id-container {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+
       .session-id {
         font-size: 11px;
         word-break: break-all;
         color: var(--zinc-600);
         font-family: ui-monospace, monospace;
+      }
+
+      .copy-btn {
+        flex-shrink: 0;
+        padding: 2px;
+        margin-left: 2px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+        line-height: 1;
+        width: auto;
+        height: auto;
+      }
+
+      .copy-btn:hover {
+        background: var(--zinc-200);
+      }
+
+      .copy-btn svg {
+        width: 12px;
+        height: 12px;
+        color: var(--teal-light);
       }
 
       #resumePrompt {
@@ -285,7 +318,20 @@
       </div>
 
       <div class="label" style="margin-top: 12px; color: #32578E; -webkit-text-fill-color: #32578E">Current session</div>
-      <div class="session-id" id="sessionId">—</div>
+      <div class="session-id-container">
+        <span class="session-id" id="sessionId">—</span>
+        <button class="copy-btn" id="copySessionIdBtn" title="Copy session ID">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <script src="popup.js"></script>

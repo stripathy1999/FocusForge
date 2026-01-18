@@ -5,6 +5,7 @@ const startBtn = document.getElementById("startBtn");
 const pauseBtn = document.getElementById("pauseBtn");
 const stopBtn = document.getElementById("stopBtn");
 const sessionIdEl = document.getElementById("sessionId");
+const copySessionIdBtn = document.getElementById("copySessionIdBtn");
 const timerEl = document.getElementById("timerEl");
 const intentInput = document.getElementById("intentInput");
 const saveIntentBtn = document.getElementById("saveIntentBtn");
@@ -298,5 +299,33 @@ stopBtn.addEventListener("click", handleStop);
 startFreshBtn?.addEventListener("click", handleStartFresh);
 continueLastBtn?.addEventListener("click", handleContinueLast);
 saveIntentBtn?.addEventListener("click", handleSaveIntent);
+
+copySessionIdBtn?.addEventListener("click", async () => {
+  const state = await getState();
+  const sessionId = state.sessionId;
+  if (sessionId && sessionId !== "—") {
+    try {
+      await navigator.clipboard.writeText(sessionId);
+      const originalTitle = copySessionIdBtn.title;
+      copySessionIdBtn.title = "Copied!";
+      // Visual feedback - change icon color temporarily
+      const svg = copySessionIdBtn.querySelector("svg");
+      if (svg) {
+        const originalColor = svg.style.color;
+        svg.style.color = "#22c55e"; // green color for confirmation
+        setTimeout(() => {
+          copySessionIdBtn.title = originalTitle;
+          svg.style.color = originalColor;
+        }, 2000);
+      } else {
+        setTimeout(() => {
+          copySessionIdBtn.title = originalTitle;
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Failed to copy session ID:", err);
+    }
+  }
+});
 
 getState().then(render);

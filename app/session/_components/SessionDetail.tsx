@@ -211,6 +211,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   );
   const [showFullTimeline, setShowFullTimeline] = useState(false);
   const [activeTab, setActiveTab] = useState<"workspaces" | "timeline" | "tasks">("workspaces");
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const keyTimeline = showFullTimeline
     ? timeline
     : buildKeyTimeline(timeline, computedSummary.lastStop?.ts);
@@ -257,12 +258,60 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               <p className="text-xs uppercase tracking-wide text-zinc-500">
                 Session Detail
               </p>
-              <h1 
-                className="text-2xl font-semibold"
-                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
-              >
-                Session {session.id}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 
+                  className="text-2xl font-semibold"
+                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
+                >
+                  Session {session.id}
+                </h1>
+                <button
+                  type="button"
+                  className="cursor-pointer flex-shrink-0 rounded p-1.5 hover:bg-zinc-200 transition-colors"
+                  title={copiedItem === "sessionId" ? "Copied!" : "Copy session ID"}
+                  onClick={() => {
+                    navigator.clipboard.writeText(session.id);
+                    setCopiedItem("sessionId");
+                    setTimeout(() => setCopiedItem(null), 2000);
+                  }}
+                >
+                  {copiedItem === "sessionId" ? (
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      style={{ color: "#22c55e" }}
+                    >
+                      <path
+                        d="M3 8L6 11L13 4"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      style={{ color: "#4777B9" }}
+                    >
+                      <path
+                        d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
               <div className="flex flex-wrap gap-3 text-sm text-zinc-600">
                 <span>Status: {session.status}</span>
                 <span>Started: {formatDate(session.started_at)}</span>
@@ -296,7 +345,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
 
         <section className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <aside className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-center gap-2">
               <h2 
                 className="text-2xl font-semibold"
                 style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
@@ -312,19 +361,19 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 </span>
               )}
             </div>
-            <div className="mt-4 space-y-6 text-base text-zinc-700">
+            <div className="mt-4 space-y-4 text-base text-zinc-700">
                 {session.status === "auto_ended" && (
                   <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
                     This session auto-ended after a long period of inactivity.
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-center" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                     Session Intent
                   </p>
                   {computedSummary.intent_tags.length > 0 ? (
                     <>
-                      <div className="mt-2 flex flex-wrap gap-2">
+                      <div className="mt-2 flex flex-wrap gap-2 justify-center">
                         {computedSummary.intent_tags.map((tag) => (
                           <span
                             key={tag}
@@ -337,13 +386,13 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       </div>
                     </>
                   ) : (
-                    <p className="mt-2 text-base text-zinc-600">No intent set.</p>
+                    <p className="mt-2 text-base text-zinc-600 text-center">No intent set.</p>
                   )}
                 </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 mt-4">
                 <button
                   type="button"
-                  className="rounded-lg px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60"
+                  className="cursor-pointer rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#32578E', borderColor: '#32578E' }}
                   onClick={() =>
                     computedSummary.resumeUrls.length
@@ -356,119 +405,103 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M3 8L6 11L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    Resume where I left off
+                    RESUME
                   </span>
                 </button>
-                <button
-                  type="button"
-                  className="text-left text-sm underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                  onClick={() =>
-                    computedSummary.lastStop?.url
-                      ? handleReopen([computedSummary.lastStop.url])
-                      : null
-                  }
-                  disabled={!computedSummary.lastStop?.url}
-                >
-                  Open last stop only
-                </button>
               </div>
-              <p className="rounded-lg bg-zinc-50 px-3 py-2 text-base text-zinc-700">
-                {computedSummary.emotionalSummary}
-              </p>
               {heuristic && (
-                <div className="rounded-lg border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-700">
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">
-                    Focus Recap
-                  </p>
+                <div className="text-sm text-zinc-700">
+                    <p className="text-base font-extrabold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                      Focus Recap
+                    </p>
+                  <div className="mt-4">
+                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                      AI Summary
+                    </p>
+                    <p className="text-base text-zinc-700">{computedSummary.resumeSummary}</p>
+                  </div>
                   <div className="mt-2 space-y-2">
                     <p>
                       <span className="font-semibold">You were doing:</span>{" "}
-                      {heuristic.doing}
+                      {(() => {
+                        const doingUrls = computedSummary.domains[0]?.topUrls?.length
+                          ? computedSummary.domains[0].topUrls
+                          : computedSummary.lastStop?.url
+                          ? [computedSummary.lastStop.url!]
+                          : null;
+                        return doingUrls ? (
+                          <button
+                            type="button"
+                            className="cursor-pointer underline-offset-4 hover:underline"
+                            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                            onClick={() => handleReopen(doingUrls)}
+                          >
+                            {heuristic.doing}
+                          </button>
+                        ) : (
+                          heuristic.doing
+                        );
+                      })()}
                     </p>
                     <p>
                       <span className="font-semibold">Where you left off:</span>{" "}
-                      {heuristic.leftOff}
+                      {computedSummary.lastStop?.url ? (
+                        <button
+                          type="button"
+                          className="cursor-pointer underline-offset-4 hover:underline"
+                          style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                          onClick={() => {
+                            if (computedSummary.lastStop?.url) {
+                              handleReopen([computedSummary.lastStop.url]);
+                            }
+                          }}
+                        >
+                          {heuristic.leftOff}
+                        </button>
+                      ) : (
+                        heuristic.leftOff
+                      )}
                     </p>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {heuristic.actions.map((action) => (
-                      <button
-                        key={action.label}
-                        type="button"
-                        className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-100"
-                        onClick={() => handleReopen(action.urls)}
-                      >
-                        {action.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 text-xs text-zinc-600">
-                    Next actions:
+                  {heuristic.actions.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {heuristic.actions.map((action) => (
+                        <button
+                          key={action.label}
+                          type="button"
+                          className="cursor-pointer rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-100"
+                          onClick={() => handleReopen(action.urls)}
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                      Next actions:
+                    </p>
+                    <div className="text-sm text-zinc-600">
                     <ul className="mt-2 list-disc pl-5">
                       {heuristic.nextActions.map((item) => (
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
-                  Resume Summary
-                </p>
-                <p className="mt-2 text-base">{computedSummary.resumeSummary}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
-                  Quick Actions
-                </p>
-                <div className="mt-2 flex flex-col gap-2 text-sm">
-                  <div className="text-zinc-700">
-                    Resume:{" "}
-                    <button
-                      type="button"
-                      className="underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                      onClick={() =>
-                        computedSummary.lastStop?.url
-                          ? handleReopen([computedSummary.lastStop.url])
-                          : null
-                      }
-                      disabled={!computedSummary.lastStop?.url}
-                    >
-                      Open last stop tab
-                    </button>
-                  </div>
-                  <div className="text-zinc-700">
-                    Continue in:{" "}
-                    <button
-                      type="button"
-                      className="underline-offset-4 hover:underline disabled:text-zinc-400 disabled:no-underline"
-                      style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                      onClick={() =>
-                        computedSummary.domains[0]?.topUrls?.length
-                          ? handleReopen(computedSummary.domains[0].topUrls)
-                          : null
-                      }
-                      disabled={!computedSummary.domains[0]?.topUrls?.length}
-                    >
-                      {computedSummary.domains[0]?.label ?? "Top"} workspace
-                    </button>
-                  </div>
-                  <div className="rounded-md border border-zinc-200 px-3 py-2 text-zinc-700">
-                    <div className="text-sm font-medium font-jura">
-                      Review top 3 pages visited
                     </div>
-                    <div className="mt-2 space-y-1 text-sm text-zinc-600">
+                  </div>
+                  <div className="mt-4">
+                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                      Review top 3 pages visited
+                    </p>
+                    <div className="space-y-1 text-sm">
                       {(computedSummary.topPages ?? []).length === 0 ? (
-                        <p>No pages yet.</p>
+                        <p className="text-zinc-600">No pages yet.</p>
                       ) : (
                         (computedSummary.topPages ?? []).map((page) => (
                           <button
                             key={page.url}
                             type="button"
-                            className="block w-full truncate text-left underline-offset-4 hover:underline"
+                            className="cursor-pointer block w-full truncate text-left underline-offset-4 hover:underline"
                             style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                             title={page.url}
                             onClick={() => handleReopen([page.url])}
@@ -480,7 +513,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+              <hr className="border-zinc-200 my-6" />
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Time Breakdown
@@ -514,11 +548,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   )}
                 </div>
               </div>
+              <hr className="border-zinc-200 my-6" />
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                   Intent Alignment
                 </p>
-                <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-600">
+                <div className="mt-2 text-sm text-zinc-600">
                   {computedSummary.focus.intentMissing ? (
                     <div className="text-base font-medium text-zinc-600" style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
                       Time split across different activities
@@ -621,25 +656,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   </div>
                 </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
-                  Last Stop
-                </p>
-                {computedSummary.lastStop ? (
-                  <a
-                    href={computedSummary.lastStop.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-block text-sm underline-offset-4 hover:underline"
-                    style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                  >
-                    {computedSummary.lastStop.title ||
-                      computedSummary.lastStop.url}
-                  </a>
-                ) : (
-                  <p className="mt-2 text-base text-zinc-500">No last stop recorded.</p>
-                )}
-              </div>
             </div>
           </aside>
 
@@ -651,7 +667,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   <button
                     type="button"
                     onClick={() => setActiveTab("workspaces")}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       activeTab === "workspaces"
                         ? "text-white"
                         : "text-zinc-600 hover:text-zinc-900"
@@ -666,7 +682,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   <button
                     type="button"
                     onClick={() => setActiveTab("timeline")}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       activeTab === "timeline"
                         ? "text-white"
                         : "text-zinc-600 hover:text-zinc-900"
@@ -681,7 +697,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   <button
                     type="button"
                     onClick={() => setActiveTab("tasks")}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       activeTab === "tasks"
                         ? "text-white"
                         : "text-zinc-600 hover:text-zinc-900"
@@ -747,8 +763,9 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                   rel="noreferrer"
                                   className="truncate underline-offset-4 hover:underline text-zinc-400"
                                   onClick={(e) => e.stopPropagation()}
+                                  title={url}
                                 >
-                                  {url}
+                                  {shortenUrl(url)}
                                 </a>
                               ))
                             )}
@@ -780,7 +797,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     {!showFullTimeline && (
                       <button
                         type="button"
-                        className="text-xs underline-offset-4 hover:underline"
+                        className="cursor-pointer text-xs underline-offset-4 hover:underline"
                         style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                         onClick={() => setShowFullTimeline((value) => !value)}
                       >
@@ -790,7 +807,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     {showFullTimeline && (
                       <button
                         type="button"
-                        className="text-xs underline-offset-4 hover:underline"
+                        className="cursor-pointer text-xs underline-offset-4 hover:underline"
                         style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
                         onClick={() => setShowFullTimeline((value) => !value)}
                       >
@@ -807,7 +824,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           key={`${event.ts}-${event.type}-${event.url || ''}-${index}`}
                           className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
                             event.url && event.type !== "BREAK"
-                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              ? "hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
                               : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
                           }`}
                         >
@@ -844,29 +861,50 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                       </span>
                                       <button
                                         type="button"
-                                        className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
-                                        title="Copy URL"
+                                        className="cursor-pointer flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
+                                        title={copiedItem === `url-${event.url}` ? "Copied!" : "Copy URL"}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           navigator.clipboard.writeText(event.url);
+                                          setCopiedItem(`url-${event.url}`);
+                                          setTimeout(() => setCopiedItem(null), 2000);
                                         }}
                                       >
-                                        <svg
-                                          width="14"
-                                          height="14"
-                                          viewBox="0 0 16 16"
-                                          fill="none"
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          style={{ color: "#4777B9" }}
-                                        >
-                                          <path
-                                            d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
-                                            stroke="currentColor"
-                                            strokeWidth="1.2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                          />
-                                        </svg>
+                                        {copiedItem === `url-${event.url}` ? (
+                                          <svg
+                                            width="14"
+                                            height="14"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            style={{ color: "#22c55e" }}
+                                          >
+                                            <path
+                                              d="M3 8L6 11L13 4"
+                                              stroke="currentColor"
+                                              strokeWidth="1.5"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            />
+                                          </svg>
+                                        ) : (
+                                          <svg
+                                            width="14"
+                                            height="14"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            style={{ color: "#4777B9" }}
+                                          >
+                                            <path
+                                              d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
+                                              stroke="currentColor"
+                                              strokeWidth="1.2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            />
+                                          </svg>
+                                        )}
                                       </button>
                                     </>
                                   ) : (
@@ -887,7 +925,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           key={item.key}
                           className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
                             item.type === "group" && item.url
-                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              ? "hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
                               : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
                           }`}
                         >
@@ -921,29 +959,50 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                   {item.url && (
                                     <button
                                       type="button"
-                                      className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
-                                      title="Copy URL"
+                                      className="cursor-pointer flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
+                                      title={copiedItem === `url-${item.url}` ? "Copied!" : "Copy URL"}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         navigator.clipboard.writeText(item.url);
+                                        setCopiedItem(`url-${item.url}`);
+                                        setTimeout(() => setCopiedItem(null), 2000);
                                       }}
                                     >
-                                      <svg
-                                        width="14"
-                                        height="14"
-                                        viewBox="0 0 16 16"
-                                        fill="none"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        style={{ color: "#4777B9" }}
-                                      >
-                                        <path
-                                          d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
-                                          stroke="currentColor"
-                                          strokeWidth="1.2"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        />
-                                      </svg>
+                                      {copiedItem === `url-${item.url}` ? (
+                                        <svg
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 16 16"
+                                          fill="none"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          style={{ color: "#22c55e" }}
+                                        >
+                                          <path
+                                            d="M3 8L6 11L13 4"
+                                            stroke="currentColor"
+                                            strokeWidth="1.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          />
+                                        </svg>
+                                      ) : (
+                                        <svg
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 16 16"
+                                          fill="none"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          style={{ color: "#4777B9" }}
+                                        >
+                                          <path
+                                            d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
+                                            stroke="currentColor"
+                                            strokeWidth="1.2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          />
+                                        </svg>
+                                      )}
                                     </button>
                                   )}
                                 </div>
@@ -1136,9 +1195,6 @@ function buildHeuristicSummary(summary: ComputedSummary) {
     actions.push({ label: "Open hackathon slides", urls: [slidesPage.url] });
   }
 
-  if (actions.length === 0) {
-    actions.push({ label: "Open last tab", urls: [lastStop.url] });
-  }
   if (nextActions.length === 0) {
     nextActions.push("Review your recent tabs");
     nextActions.push("Continue where you left off");
