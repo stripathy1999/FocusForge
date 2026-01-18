@@ -338,11 +338,19 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: session.id }),
       });
+      
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Server returned HTML instead of JSON. Response: ${text.substring(0, 200)}`);
+      }
+      
       const data = await response.json();
       if (response.ok && data.ok) {
         setJournalUrl(data.journalUrl || `https://opennote.com/journal/${data.journalId}`);
       } else {
-        setExportError(data.error || 'Failed to export journal');
+        setExportError(data.error || data.details || 'Failed to export journal');
       }
     } catch (error: any) {
       setExportError(error.message || 'Failed to export journal');
