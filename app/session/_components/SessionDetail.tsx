@@ -258,60 +258,12 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               <p className="text-xs uppercase tracking-wide text-zinc-500">
                 Session Detail
               </p>
-              <div className="flex items-center gap-2">
-                <h1 
-                  className="text-2xl font-semibold"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
-                >
-                  Session {session.id}
-                </h1>
-                <button
-                  type="button"
-                  className="cursor-pointer flex-shrink-0 rounded p-1.5 hover:bg-zinc-200 transition-colors"
-                  title={copiedItem === "sessionId" ? "Copied!" : "Copy session ID"}
-                  onClick={() => {
-                    navigator.clipboard.writeText(session.id);
-                    setCopiedItem("sessionId");
-                    setTimeout(() => setCopiedItem(null), 2000);
-                  }}
-                >
-                  {copiedItem === "sessionId" ? (
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      style={{ color: "#22c55e" }}
-                    >
-                      <path
-                        d="M3 8L6 11L13 4"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      style={{ color: "#4777B9" }}
-                    >
-                      <path
-                        d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
-                        stroke="currentColor"
-                        strokeWidth="1.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
+              <h1 
+                className="text-2xl font-semibold"
+                style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}
+              >
+                Session {session.id}
+              </h1>
               <div className="flex flex-wrap gap-3 text-sm text-zinc-600">
                 <span>Status: {session.status}</span>
                 <span>Started: {formatDate(session.started_at)}</span>
