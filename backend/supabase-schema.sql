@@ -36,22 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
 CREATE INDEX IF NOT EXISTS idx_events_domain ON events(domain);
 
--- Create opennote_exports table to track Opennote journal/practice exports
-CREATE TABLE IF NOT EXISTS opennote_exports (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  journal_id TEXT,
-  journal_url TEXT,
-  practice_set_id TEXT,
-  practice_set_url TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create index for opennote_exports
-CREATE INDEX IF NOT EXISTS idx_opennote_exports_session_id ON opennote_exports(session_id);
-
 -- Disable RLS for hackathon (as per requirements)
 ALTER TABLE sessions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE events DISABLE ROW LEVEL SECURITY;
 ALTER TABLE analysis DISABLE ROW LEVEL SECURITY;
-ALTER TABLE opennote_exports DISABLE ROW LEVEL SECURITY;
