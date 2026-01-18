@@ -2,8 +2,8 @@ import { corsHeaders, corsJson } from "@/app/api/cors";
 import { addEvent, getEvents, getSession, updateSessionStatus } from "@/lib/store";
 import { Event } from "@/lib/types";
 
-const IDLE_THRESHOLD_MS = 10 * 60 * 1000;
-const HARD_BREAK_THRESHOLD_MS = 2 * 60 * 60 * 1000;
+const IDLE_THRESHOLD_MS = 60 * 1000;
+const HARD_BREAK_THRESHOLD_MS = 2 * 60 * 1000;
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders });

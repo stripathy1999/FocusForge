@@ -1,15 +1,15 @@
 import { supabaseAdmin } from './supabase'
-
-const IDLE_THRESHOLD_MS = 30 * 60 * 1000 // 30 minutes
+import { IDLE_BREAK_MS, IDLE_END_MS } from './idle-policy'
 
 /**
- * Check and auto-pause idle sessions
+ * Check and auto-pause/end idle sessions
  * Called periodically or on event insertion
  */
 export async function checkAndAutoPauseIdleSessions(): Promise<void> {
   try {
     const now = Date.now()
-    const threshold = now - IDLE_THRESHOLD_MS
+    const breakThreshold = now - IDLE_BREAK_MS
+    const endThreshold = now - IDLE_END_MS
 
     // Get all active sessions
     const { data: activeSessions, error: sessionsError } = await supabaseAdmin
@@ -41,20 +41,75 @@ export async function checkAndAutoPauseIdleSessions(): Promise<void> {
 
         if (sessionData) {
           const startedAt = new Date(sessionData.started_at).getTime()
-          if (startedAt < threshold) {
-            // Session started more than 30 min ago with no events - pause it
+          if (startedAt < endThreshold) {
+            await supabaseAdmin
+              .from('sessions')
+              .update({ status: 'ended', ended_at: new Date(startedAt).toISOString() })
+              .eq('id', session.id)
+            console.info('[IdlePolicy] Auto-ended session (no events)', {
+              sessionId: session.id,
+              startedAt,
+            })
+            continue
+          }
+          if (startedAt < breakThreshold) {
             await supabaseAdmin
               .from('sessions')
               .update({ status: 'paused' })
               .eq('id', session.id)
+            await supabaseAdmin.from('events').insert({
+              session_id: session.id,
+              ts: startedAt,
+              type: 'BREAK',
+              url: '',
+              title: 'Break',
+              duration_sec: null,
+              domain: null,
+            })
+            console.info('[IdlePolicy] Auto-paused session (no events)', {
+              sessionId: session.id,
+              startedAt,
+            })
           }
         }
-      } else if (lastEvent && lastEvent.ts < threshold) {
-        // Last event was more than 30 min ago - pause session
+      } else if (lastEvent && lastEvent.ts < endThreshold) {
+        // Last event was beyond end threshold - end session
+        await supabaseAdmin
+          .from('sessions')
+          .update({ status: 'ended', ended_at: new Date(lastEvent.ts).toISOString() })
+          .eq('id', session.id)
+        await supabaseAdmin.from('events').insert({
+          session_id: session.id,
+          ts: lastEvent.ts,
+          type: 'STOP',
+          url: '',
+          title: 'Auto-ended due to inactivity',
+          duration_sec: null,
+          domain: null,
+        })
+        console.info('[IdlePolicy] Auto-ended session', {
+          sessionId: session.id,
+          lastEventTs: lastEvent.ts,
+        })
+      } else if (lastEvent && lastEvent.ts < breakThreshold) {
+        // Last event was beyond break threshold - pause session
         await supabaseAdmin
           .from('sessions')
           .update({ status: 'paused' })
           .eq('id', session.id)
+        await supabaseAdmin.from('events').insert({
+          session_id: session.id,
+          ts: lastEvent.ts,
+          type: 'BREAK',
+          url: '',
+          title: 'Break',
+          duration_sec: null,
+          domain: null,
+        })
+        console.info('[IdlePolicy] Auto-paused session', {
+          sessionId: session.id,
+          lastEventTs: lastEvent.ts,
+        })
       }
     }
   } catch (error) {

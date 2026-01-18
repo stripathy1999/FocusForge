@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { extractDomain } from '@/lib/utils'
 import { checkAndAutoPauseIdleSessions } from '@/lib/auto-pause'
+import { IDLE_BREAK_MS, IDLE_END_MS } from '@/lib/idle-policy'
 
 export default async function handler(
   req: NextApiRequest,
@@ -36,6 +37,53 @@ export default async function handler(
       .order('ts', { ascending: false })
       .limit(1)
       .single()
+
+    if (previousEvents?.ts) {
+      const gapMs = ts - previousEvents.ts
+      if (gapMs >= IDLE_END_MS) {
+        await supabaseAdmin
+          .from('sessions')
+          .update({ status: 'ended', ended_at: new Date(previousEvents.ts).toISOString() })
+          .eq('id', sessionId)
+        await supabaseAdmin.from('events').insert({
+          session_id: sessionId,
+          ts: previousEvents.ts,
+          type: 'STOP',
+          url: '',
+          title: 'Auto-ended due to inactivity',
+          duration_sec: null,
+          domain: null,
+        })
+        console.info('[IdlePolicy] Auto-ended session on event', {
+          sessionId,
+          gapMs,
+        })
+        return res.status(409).json({
+          error: 'Session auto-ended due to inactivity.',
+          autoEnded: true,
+        })
+      }
+
+      if (gapMs >= IDLE_BREAK_MS) {
+        await supabaseAdmin
+          .from('sessions')
+          .update({ status: 'paused' })
+          .eq('id', sessionId)
+        await supabaseAdmin.from('events').insert({
+          session_id: sessionId,
+          ts: previousEvents.ts,
+          type: 'BREAK',
+          url: '',
+          title: 'Break',
+          duration_sec: null,
+          domain: null,
+        })
+        console.info('[IdlePolicy] Auto-paused session on event', {
+          sessionId,
+          gapMs,
+        })
+      }
+    }
 
     // Calculate duration_sec
     let duration_sec: number | null = null
