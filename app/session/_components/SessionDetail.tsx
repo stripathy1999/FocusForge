@@ -254,6 +254,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [shakeTimelineTab, setShakeTimelineTab] = useState(false);
   const [shakeResumeButton, setShakeResumeButton] = useState(false);
+  const [hoveredAlignment, setHoveredAlignment] = useState<{ label: string; pct: number } | null>(null);
   const keyTimeline = showFullTimeline
     ? timeline
     : buildKeyTimeline(timeline, computedSummary.lastStop?.ts);
@@ -696,11 +697,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <div className="text-base font-medium text-zinc-600" style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
                       Time split across different activities
                     </div>
-                  ) : computedSummary.focus.tooShort ? (
-                    <div className="text-base font-semibold font-jura text-zinc-900">
-                      Not enough data yet — keep going for focus insights.
-                    </div>
-                  ) : (
+                  ) : !computedSummary.focus.tooShort && (
                     <div className="text-3xl font-semibold font-jura text-zinc-900">
                       {computedSummary.focus.displayFocusPct}% Aligned
                     </div>
@@ -713,6 +710,10 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     const pctA = total > 0 ? (a / total) * 100 : 0;
                     const pctO = total > 0 ? (o / total) * 100 : 0;
                     const pctN = total > 0 ? (n / total) * 100 : 100;
+                    const roundedPctA = Math.round(pctA);
+                    const roundedPctO = Math.round(pctO);
+                    const roundedPctN = Math.round(pctN);
+                    
                     return (
                       <div className="mt-3 space-y-2.5">
                         <div
@@ -724,18 +725,20 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                             <>
                               {a > 0 && (
                                 <div
-                                  className="absolute left-0 top-0 h-full"
+                                  className="absolute left-0 top-0 h-full cursor-pointer transition-opacity hover:opacity-90"
                                   style={{
                                     width: `${pctA}%`,
                                     backgroundColor: "#32578E",
                                     minWidth: pctA < 1 ? "2px" : undefined,
                                   }}
                                   title={`Aligned: ${formatDuration(a)}`}
+                                  onMouseEnter={() => setHoveredAlignment({ label: "Aligned", pct: roundedPctA })}
+                                  onMouseLeave={() => setHoveredAlignment(null)}
                                 />
                               )}
                               {o > 0 && (
                                 <div
-                                  className="absolute top-0 h-full"
+                                  className="absolute top-0 h-full cursor-pointer transition-opacity hover:opacity-90"
                                   style={{
                                     left: `${pctA}%`,
                                     width: `${pctO}%`,
@@ -743,18 +746,32 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                     minWidth: pctO < 1 ? "2px" : undefined,
                                   }}
                                   title={`Off-intent: ${formatDuration(o)}`}
+                                  onMouseEnter={() => setHoveredAlignment({ label: "Off-intent", pct: roundedPctO })}
+                                  onMouseLeave={() => setHoveredAlignment(null)}
                                 />
                               )}
                               {n > 0 && (
                                 <div
-                                  className="absolute top-0 h-full"
+                                  className="absolute top-0 h-full cursor-pointer transition-opacity hover:opacity-90"
                                   style={{
                                     left: `${pctA + pctO}%`,
                                     width: `${pctN}%`,
                                     backgroundColor: "#94a3b8",
                                   }}
                                   title={`Neutral: ${formatDuration(n)}`}
+                                  onMouseEnter={() => setHoveredAlignment({ label: "Neutral", pct: roundedPctN })}
+                                  onMouseLeave={() => setHoveredAlignment(null)}
                                 />
+                              )}
+                              {hoveredAlignment && (
+                                <div
+                                  className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                                  aria-hidden
+                                >
+                                  <span className="rounded-md bg-white px-2.5 py-1 text-sm font-medium text-zinc-800 shadow-md ring-1 ring-zinc-200/80">
+                                    {hoveredAlignment.label}: {hoveredAlignment.pct}%
+                                  </span>
+                                </div>
                               )}
                             </>
                           ) : (
