@@ -9,6 +9,8 @@ export default function DemoSessionPage() {
     started_at: now - 45 * 60 * 1000,
     ended_at: now - 5 * 60 * 1000,
     status: "ended",
+    intent_raw: "interview prep",
+    intent_tags: ["interview prep"],
   };
 
   const events: Event[] = [

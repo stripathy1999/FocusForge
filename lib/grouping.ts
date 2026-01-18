@@ -68,6 +68,22 @@ export function computeSummary(
   const resumeUrls = buildResumeUrls(lastStop, domains);
   const lastStopDomain = lastStop?.domain ?? safeDomain(lastStop?.url ?? "");
   const lastStopWorkspace = domains.find((domain) => domain.domain === lastStopDomain);
+  let aiRecap =
+    analysis?.aiRecap ??
+    analysis?.resumeSummary ??
+    fallbackResumeSummary;
+  let aiActions =
+    analysis?.aiActions?.length
+      ? analysis.aiActions
+      : analysis?.nextActions?.length
+        ? analysis.nextActions
+        : fallbackNextActions;
+  const aiConfidenceScore = analysis?.aiConfidenceScore ?? 0;
+  const aiConfidenceLabel = analysis?.aiConfidenceLabel ?? "low";
+  if (aiConfidenceLabel === "low") {
+    aiRecap = "Not enough signal; showing ground truth only.";
+    aiActions = [];
+  }
 
   return {
     timeline,
@@ -89,11 +105,13 @@ export function computeSummary(
     intent_tags: session.intent_tags ?? [],
     emotionalSummary: buildEmotionalSummary(domains),
     aiSummary: analysis?.source === "gemini",
-    resumeSummary: analysis?.resumeSummary ?? fallbackResumeSummary,
-    nextActions: analysis?.nextActions?.length
-      ? analysis.nextActions
-      : fallbackNextActions,
+    resumeSummary: aiRecap,
+    nextActions: aiActions,
     pendingDecisions: analysis?.pendingDecisions ?? [],
+    aiRecap,
+    aiActions,
+    aiConfidenceScore,
+    aiConfidenceLabel,
   };
 }
 

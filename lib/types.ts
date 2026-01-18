@@ -58,9 +58,13 @@ export type TopPage = {
 
 export type AnalysisResult = {
   source: "gemini";
-  resumeSummary: string;
-  nextActions: string[];
-  pendingDecisions: string[];
+  aiRecap?: string;
+  aiActions?: string[];
+  aiConfidenceScore?: number;
+  aiConfidenceLabel?: "low" | "medium" | "high";
+  resumeSummary?: string;
+  nextActions?: string[];
+  pendingDecisions?: string[];
 };
 
 export type ComputedSummary = {
@@ -91,4 +95,8 @@ export type ComputedSummary = {
   resumeSummary: string;
   nextActions: string[];
   pendingDecisions: string[];
+  aiRecap: string;
+  aiActions: string[];
+  aiConfidenceScore: number;
+  aiConfidenceLabel: "low" | "medium" | "high";
 };

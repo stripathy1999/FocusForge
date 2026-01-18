@@ -56,9 +56,34 @@ export async function POST(request: Request) {
       return corsJson({ error: "Invalid JSON in request body", details: parseError.message }, { status: 400 });
     }
     
-    const { sessionId } = body;
+    const { sessionId, demoPayload } = body ?? {};
 
-    if (!sessionId || typeof sessionId !== 'string') {
+    if (demoPayload?.session && demoPayload?.events) {
+      const markdown = generateSessionMarkdown(demoPayload);
+      const title =
+        demoPayload.session?.id
+          ? `FocusForge — Session ${String(demoPayload.session.id).slice(0, 8)}`
+          : "FocusForge — Demo Session";
+      try {
+        const journalResult = await importJournalToOpennote(markdown, title);
+        return corsJson({
+          ok: true,
+          journalId: journalResult.journalId,
+          journalUrl: journalResult.url,
+        });
+      } catch (opennoteError: any) {
+        console.error("Opennote export error:", opennoteError);
+        return corsJson(
+          {
+            error: "Failed to export to Opennote",
+            details: opennoteError.message,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    if (!sessionId || typeof sessionId !== "string") {
       return corsJson({ error: "Missing or invalid sessionId" }, { status: 400 });
     }
 
@@ -176,6 +201,10 @@ export async function POST(request: Request) {
     const analysisData = {
       ...(analysisSummary || {}),
       resumeSummary: computedSummary.resumeSummary,
+      aiRecap: computedSummary.aiRecap,
+      aiActions: computedSummary.aiActions,
+      aiConfidenceScore: computedSummary.aiConfidenceScore,
+      aiConfidenceLabel: computedSummary.aiConfidenceLabel,
       nextActions: computedSummary.nextActions,
       pendingDecisions: computedSummary.pendingDecisions,
       workspaces: computedSummary.domains.map((domain) => ({

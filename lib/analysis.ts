@@ -24,7 +24,29 @@ export async function runGeminiAnalysis(
     events: events.length,
   });
 
-  const prompt = buildPrompt(summary);
+  const payload = buildPayload(summary);
+  const confidence = payload.confidenceScore;
+  const confidenceLabel = toConfidenceLabel(confidence);
+  if (confidenceLabel === "low") {
+    const analysis: AnalysisResult = {
+      source: "gemini",
+      aiRecap: "Not enough signal; showing ground truth only.",
+      aiActions: [],
+      aiConfidenceScore: confidence,
+      aiConfidenceLabel: confidenceLabel,
+      resumeSummary: "Not enough signal; showing ground truth only.",
+      nextActions: [],
+      pendingDecisions: [],
+    };
+    await setAnalysis(sessionId, analysis);
+    console.info("[Gemini] Skipped due to low confidence", {
+      sessionId,
+      confidence,
+    });
+    return analysis;
+  }
+
+  const prompt = buildPrompt(payload);
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
     {
@@ -54,61 +76,175 @@ export async function runGeminiAnalysis(
     console.warn("[Gemini] Empty response text");
   }
   const parsed = safeParseJson(text);
-  const analysis: AnalysisResult = parsed
+  const normalized = normalizeAiOutput(parsed, payload);
+  const analysis: AnalysisResult = normalized
     ? {
         source: "gemini",
-        resumeSummary: parsed.resumeSummary ?? summary.resumeSummary,
-        nextActions: parsed.nextActions ?? summary.nextActions,
-        pendingDecisions: parsed.pendingDecisions ?? [],
+        aiRecap: normalized.recap,
+        aiActions: normalized.actions,
+        aiConfidenceScore: payload.confidenceScore,
+        aiConfidenceLabel: confidenceLabel,
+        resumeSummary: normalized.recap,
+        nextActions: normalized.actions,
+        pendingDecisions: [],
       }
     : {
         source: "gemini",
-        resumeSummary: text.trim() || summary.resumeSummary,
-        nextActions: summary.nextActions,
+        aiRecap: "Not enough signal; showing ground truth only.",
+        aiActions: [],
+        aiConfidenceScore: payload.confidenceScore,
+        aiConfidenceLabel: "low",
+        resumeSummary: "Not enough signal; showing ground truth only.",
+        nextActions: [],
         pendingDecisions: [],
       };
-  if (!analysis.resumeSummary) {
-    return null;
-  }
   console.info("[Gemini] Analysis stored", {
     sessionId,
-    hasResume: Boolean(analysis.resumeSummary),
+    confidence: analysis.aiConfidenceScore,
   });
   await setAnalysis(sessionId, analysis);
   return analysis;
 }
 
-function buildPrompt(summary: ReturnType<typeof computeSummary>): string {
-  const workspaces = summary.domains
-    .slice(0, 4)
-    .map((domain) => `- ${domain.label}: ${domain.timeSec}s`)
-    .join("\n");
-  const lastStop = summary.lastStop?.title || summary.lastStop?.url || "unknown";
-  const intent = summary.intent_tags.length
-    ? summary.intent_tags.join(", ")
-    : "none provided";
+type PromptPayload = {
+  intentTags: string[];
+  totalTimeSec: number;
+  lastStop?: { label: string; url: string; domain: string };
+  topWorkspaces: Array<{
+    domain: string;
+    label: string;
+    timeSec: number;
+    topTitles: string[];
+    topUrls: string[];
+  }>;
+  confidenceScore: number;
+};
 
+function buildPayload(
+  summary: ReturnType<typeof computeSummary>,
+): PromptPayload {
+  const lastStopUrl = summary.lastStop?.url ?? "";
+  return {
+    intentTags: summary.intent_tags ?? [],
+    totalTimeSec: summary.focus.totalTimeSec ?? 0,
+    lastStop: lastStopUrl
+      ? {
+          label:
+            summary.lastStop?.title ||
+            summary.lastStop?.label ||
+            lastStopUrl,
+          url: lastStopUrl,
+          domain: domainFromUrl(lastStopUrl),
+        }
+      : undefined,
+    topWorkspaces: summary.domains.slice(0, 5).map((domain) => ({
+      domain: domain.domain,
+      label: domain.label,
+      timeSec: domain.timeSec,
+      topTitles: (domain.topTitles ?? []).slice(0, 3),
+      topUrls: domain.topUrls.slice(0, 3),
+    })),
+    confidenceScore: computeConfidenceScore(summary),
+  };
+}
+
+function buildPrompt(payload: PromptPayload): string {
+  const domains = payload.topWorkspaces.map((ws) => ws.domain);
   return [
-    "You are assisting a productivity app. Return ONLY valid JSON.",
-    "Fields: resumeSummary (string), nextActions (string[]), pendingDecisions (string[]).",
-    "Be concise, human, and specific. No markdown.",
-    "If intent is empty, do not infer strongly; stay neutral.",
+    "You are a productivity assistant. Return ONLY valid JSON.",
+    "Use ONLY the provided data: domains, titles, timestamps, durations, lastStop, intentTags.",
+    "Do NOT infer activities beyond what the data supports.",
+    "If you cannot ground a claim, omit it.",
+    "The recap must be 2-3 sentences.",
+    "Return exactly 3 actions. Each action must explicitly mention one of the domains.",
+    "Do NOT invent domains. Use the exact domain string (e.g., linkedin.com).",
+    "Do NOT add markdown.",
     "",
-    `Intent: ${intent}`,
-    `Workspaces:\n${workspaces}`,
-    `Last stop: ${lastStop}`,
+    "Schema:",
+    "{",
+    '  "recap": "string (2-3 sentences)",',
+    '  "actions": ["string", "string", "string"],',
+    '  "confidenceScore": 0',
+    "}",
+    "",
+    `Allowed domains: ${domains.join(", ")}`,
+    "Input JSON:",
+    JSON.stringify(payload),
   ].join("\n");
 }
 
-function safeParseJson(text: string): Partial<AnalysisResult> | null {
+function safeParseJson(text: string): unknown | null {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1) {
     return null;
   }
   try {
-    return JSON.parse(text.slice(start, end + 1)) as Partial<AnalysisResult>;
+    return JSON.parse(text.slice(start, end + 1));
   } catch {
     return null;
+  }
+}
+
+function normalizeAiOutput(
+  parsed: unknown,
+  payload: PromptPayload,
+): { recap: string; actions: string[] } | null {
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+  const data = parsed as {
+    recap?: unknown;
+    actions?: unknown;
+    confidenceScore?: unknown;
+  };
+  const recap = typeof data.recap === "string" ? data.recap.trim() : "";
+  if (!recap || !isValidSentenceCount(recap)) {
+    return null;
+  }
+  const actions = Array.isArray(data.actions)
+    ? data.actions.filter((action) => typeof action === "string")
+    : [];
+  if (actions.length !== 3) {
+    return null;
+  }
+  const domains = payload.topWorkspaces.map((ws) => ws.domain.toLowerCase());
+  const actionsWithDomain = actions.every((action) =>
+    domains.some((domain) => action.toLowerCase().includes(domain)),
+  );
+  if (!actionsWithDomain) {
+    return null;
+  }
+  return { recap, actions };
+}
+
+function isValidSentenceCount(text: string): boolean {
+  const matches = text.match(/[.!?]+/g);
+  const count = matches ? matches.length : 0;
+  return count >= 2 && count <= 3;
+}
+
+function computeConfidenceScore(summary: ReturnType<typeof computeSummary>): number {
+  const total = summary.focus.totalTimeSec ?? 0;
+  if (!total || summary.intent_tags.length === 0) {
+    return 0;
+  }
+  const known = total - (summary.focus.unknownTimeSec ?? 0);
+  const ratio = total > 0 ? known / total : 0;
+  return Math.max(0, Math.min(1, Number(ratio.toFixed(2))));
+}
+
+function toConfidenceLabel(score: number): "low" | "medium" | "high" {
+  if (score >= 0.7) return "high";
+  if (score >= 0.4) return "medium";
+  return "low";
+}
+
+function domainFromUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./, "");
+  } catch {
+    return "unknown";
   }
 }

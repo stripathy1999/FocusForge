@@ -273,6 +273,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const [exportError, setExportError] = useState<string | null>(null);
   const sessionTitle = buildSessionTitle(session, computedSummary);
   const shortSessionId = session.id.slice(0, 8);
+  const isDemoSession = session.id.startsWith("demo");
   const [dismissedMismatch, setDismissedMismatch] = useState(false);
   const [intentUpdating, setIntentUpdating] = useState(false);
   const [intentUpdateMessage, setIntentUpdateMessage] = useState<string | null>(
@@ -428,10 +429,74 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
     setExportingJournal(true);
     setExportError(null);
     try {
+      const demoPayload = isDemoSession
+        ? {
+            session: {
+              id: session.id,
+              started_at: new Date(session.started_at).toISOString(),
+              ended_at: session.ended_at
+                ? new Date(session.ended_at).toISOString()
+                : null,
+              intent_text:
+                computedSummary.intent_tags?.length > 0
+                  ? computedSummary.intent_tags.join(", ")
+                  : computedSummary.intent_raw ?? null,
+            },
+            events: computedSummary.timeline
+              .filter((event) => event.type === "TAB_ACTIVE" && event.url)
+              .map((event) => ({
+                url: event.url,
+                title: event.title,
+                ts: new Date(event.ts).toISOString(),
+              })),
+            analysis: {
+              resumeSummary: computedSummary.resumeSummary,
+              aiRecap: computedSummary.aiRecap,
+              aiActions: computedSummary.aiActions,
+              aiConfidenceLabel: computedSummary.aiConfidenceLabel,
+              workspaces: computedSummary.domains.map((domain) => ({
+                label: domain.label,
+                timeSec: domain.timeSec,
+                topUrls: domain.topUrls,
+                topTitles: domain.topTitles,
+              })),
+              lastStop: computedSummary.lastStop?.url
+                ? {
+                    label:
+                      computedSummary.lastStop.title ||
+                      computedSummary.lastStop.label ||
+                      computedSummary.lastStop.url,
+                    url: computedSummary.lastStop.url,
+                  }
+                : undefined,
+              nextActions: computedSummary.nextActions,
+              pendingDecisions: computedSummary.pendingDecisions,
+              mostActiveWorkspace: computedSummary.domains[0]
+                ? {
+                    label: computedSummary.domains[0].label,
+                    timeSec: computedSummary.domains[0].timeSec,
+                  }
+                : undefined,
+              topPages: computedSummary.topPages.map((page) => ({
+                title: page.title,
+                url: page.url,
+                domain: page.domain,
+              })),
+              alignment: {
+                alignedSec: computedSummary.focus.alignedTimeSec,
+                offIntentSec: computedSummary.focus.offIntentTimeSec,
+                neutralSec: computedSummary.focus.neutralTimeSec,
+                unknownSec: computedSummary.focus.unknownTimeSec,
+              },
+            },
+          }
+        : undefined;
       const response = await fetch('/api/opennote/journal/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.id }),
+        body: JSON.stringify(
+          demoPayload ? { demoPayload } : { sessionId: session.id },
+        ),
       });
       
       // Check if response is JSON before parsing
@@ -567,9 +632,9 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               {computedSummary.aiSummary && (
                 <span
                   className="rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold font-jura uppercase tracking-wide text-purple-700"
-                  title="Generated using Gemini based on session activity (URLs + timing only). No content captured."
+                  title="AI summary is based on URLs/titles only (no content)."
                 >
-                  ✨ AI-generated summary
+                  ✨ AI summary (URLs/titles only)
                 </span>
               )}
             </div>
@@ -694,7 +759,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </p>
                   <div className="mt-4">
                     <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
-                      Ground truth
+                      Ground Truth (deterministic)
                     </p>
                     <div className="space-y-1 text-sm text-zinc-700">
                       <p>
@@ -716,10 +781,28 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </div>
                   </div>
                   <div className="mt-4">
-                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
-                      AI guess
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-bold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                        AI Summary (grounded)
+                      </p>
+                      <span
+                        className="rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold font-jura uppercase tracking-wide text-purple-700"
+                        title="AI summary is based on URLs/titles only (no content)."
+                      >
+                        URLs/titles only
+                      </span>
+                    </div>
+                    <p className="mt-2 text-base text-zinc-700">
+                      {computedSummary.aiRecap || computedSummary.resumeSummary}
                     </p>
-                    <p className="text-base text-zinc-700">{computedSummary.resumeSummary}</p>
+                    {computedSummary.aiActions?.length > 0 &&
+                      computedSummary.aiConfidenceLabel !== "low" && (
+                      <ul className="mt-3 list-disc pl-5 text-sm text-zinc-600">
+                        {computedSummary.aiActions.slice(0, 3).map((action) => (
+                          <li key={action}>{action}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                   <div className="mt-2 space-y-2">
                     <p>

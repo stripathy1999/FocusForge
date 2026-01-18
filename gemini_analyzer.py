@@ -4,7 +4,7 @@ Enhanced analyzer with Gemini AI integration for intelligent analysis.
 import json
 import os
 from typing import Dict, List, Any, Optional
-from analyzer import analyzeSession, group_events_by_domain, create_workspaces_from_domains, get_last_stop
+from analyzer import analyzeSession, group_events_by_domain, create_workspaces_from_domains, get_last_stop, extract_domain
 
 # Try to import Gemini (will fail gracefully if not installed)
 try:
@@ -17,28 +17,29 @@ except ImportError:
 
 GEMINI_PROMPT = """You are FocusForge, an assistant that analyzes browser activity from a single focus session. Return ONLY valid JSON that matches the schema below. No backticks. No explanations.
 
-CRITICAL: resumeSummary Guidelines
-- Write in natural, conversational language (1-2 sentences)
-- Group activities by INTENTION/PURPOSE, not by individual websites
-- Use SERVICE NAMES (e.g., "Canva", "Netflix", "Google Docs", "GitHub") - NEVER use full URLs or domains
-- Describe WHAT the user was doing, not WHERE they were browsing
-- Use action verbs: designing, researching, applying, coding, learning, etc.
-
-Examples of GOOD summaries:
-✓ "You were switching between designing on Canva and applying for jobs on Netflix"
-✓ "You spent time researching on Wikipedia and coding on GitHub"
-✓ "You were working on job applications, switching between LinkedIn and company career pages"
-✓ "You were learning by reading documentation and practicing on LeetCode"
-
-Examples of BAD summaries (DO NOT DO THIS):
-✗ "You were switching between www.canva.com and explore.jobs.netflix.net"
-✗ "You visited wikipedia.org and github.com"
-✗ "You were on canva.com, then netflix.net, then back to canva.com"
+CRITICAL: Grounded summary rules
+- Use ONLY the provided domains, titles, durations, lastStop, and goal
+- Do NOT invent what the user was doing unless directly supported by titles/domains
+- aiRecap must be 2-3 sentences
+- aiActions must be exactly 3 items, each explicitly mentioning a domain string from the input
+- aiConfidenceScore must be between 0 and 1
+- If confidence is low, still return grounded text; do not hallucinate
 
 Other constraints: limit workspaces to max 5. nextActions max 5 and each starts with a verb. pendingDecisions max 3. Do not invent websites, events, or facts not in the input. lastStop.url must be present in the input events. Labels should be short and human-friendly.
 
 Schema:
-{ "goalInferred":"string", "workspaces":[{"label":"string","timeSec":0,"topUrls":["string"]}], "resumeSummary":"string", "lastStop":{"label":"string","url":"string"}, "nextActions":["string"], "pendingDecisions":["string"] }"""
+{
+  "goalInferred":"string",
+  "workspaces":[{"label":"string","timeSec":0,"topUrls":["string"]}],
+  "lastStop":{"label":"string","url":"string"},
+  "aiRecap":"string",
+  "aiActions":["string","string","string"],
+  "aiConfidenceScore":0,
+  "aiConfidenceLabel":"low|medium|high",
+  "resumeSummary":"string",
+  "nextActions":["string"],
+  "pendingDecisions":["string"]
+}"""
 
 
 def extract_service_name(url: str) -> str:
@@ -225,7 +226,18 @@ def validate_output(output: Dict[str, Any], events: List[Dict]) -> bool:
         True if valid, raises ValueError if invalid
     """
     # Check required fields
-    required_fields = ["goalInferred", "workspaces", "resumeSummary", "lastStop", "nextActions", "pendingDecisions"]
+    required_fields = [
+        "goalInferred",
+        "workspaces",
+        "lastStop",
+        "resumeSummary",
+        "nextActions",
+        "pendingDecisions",
+        "aiRecap",
+        "aiActions",
+        "aiConfidenceScore",
+        "aiConfidenceLabel",
+    ]
     for field in required_fields:
         if field not in output:
             raise ValueError(f"Missing required field: {field}")
@@ -249,12 +261,20 @@ def validate_output(output: Dict[str, Any], events: List[Dict]) -> bool:
     if len(pending_decisions) > 3:
         raise ValueError(f"Too many pendingDecisions: {len(pending_decisions)} (max 3)")
     
-    # Validate resumeSummary (1-2 sentences)
-    resume_summary = output["resumeSummary"]
-    sentence_count = len([s for s in resume_summary.split('.') if s.strip()])
-    if sentence_count < 1 or sentence_count > 2:
-        # Warn but don't fail (sometimes periods can be in URLs, etc.)
-        pass
+    # Validate aiRecap (2-3 sentences)
+    ai_recap = output["aiRecap"]
+    sentence_count = len([s for s in ai_recap.replace("?", ".").replace("!", ".").split('.') if s.strip()])
+    if sentence_count < 2 or sentence_count > 3:
+        raise ValueError("aiRecap must be 2-3 sentences")
+
+    # Validate aiActions (exactly 3, each mentions a domain)
+    ai_actions = output["aiActions"]
+    if len(ai_actions) != 3:
+        raise ValueError("aiActions must have exactly 3 items")
+    input_domains = {extract_domain(event.get("url", "")) for event in events if event.get("url")}
+    for action in ai_actions:
+        if not any(domain and domain in action for domain in input_domains):
+            raise ValueError(f"aiAction does not mention a known domain: {action}")
     
     # Validate lastStop.url is in input events
     last_stop_url = output["lastStop"].get("url", "")
@@ -269,6 +289,23 @@ def validate_output(output: Dict[str, Any], events: List[Dict]) -> bool:
                 raise ValueError(f"Workspace URL '{url}' not found in input events")
     
     return True
+
+
+def normalize_ai_fields(output: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure AI fields are present and consistent with legacy fields."""
+    if "aiRecap" not in output and output.get("resumeSummary"):
+        output["aiRecap"] = output.get("resumeSummary", "")
+    if "aiActions" not in output and output.get("nextActions"):
+        output["aiActions"] = output.get("nextActions", [])[:3]
+    if "resumeSummary" not in output and output.get("aiRecap"):
+        output["resumeSummary"] = output.get("aiRecap", "")
+    if "nextActions" not in output and output.get("aiActions"):
+        output["nextActions"] = output.get("aiActions", [])
+    if "aiConfidenceScore" not in output:
+        output["aiConfidenceScore"] = 0.0
+    if "aiConfidenceLabel" not in output:
+        output["aiConfidenceLabel"] = "low"
+    return output
 
 
 def analyzeSessionWithGemini(goal: str, eventsWithDuration: Dict, api_key: Optional[str] = None, use_gemini: bool = True) -> Dict[str, Any]:
@@ -298,6 +335,7 @@ def analyzeSessionWithGemini(goal: str, eventsWithDuration: Dict, api_key: Optio
     if use_gemini and GEMINI_AVAILABLE:
         try:
             gemini_result = call_gemini(goal, events, workspaces, last_stop, api_key=api_key)
+            gemini_result = normalize_ai_fields(gemini_result)
             
             # Validate the result
             validate_output(gemini_result, events)

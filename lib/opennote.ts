@@ -19,6 +19,9 @@ interface SessionData {
   }>
   analysis?: {
     resumeSummary?: string
+    aiRecap?: string
+    aiActions?: string[]
+    aiConfidenceLabel?: "high" | "medium" | "low"
     workspaces?: Array<{ label: string; timeSec: number; topUrls: string[] }>
     lastStop?: { label: string; url: string }
     nextActions?: string[]
@@ -60,7 +63,7 @@ export function generateSessionMarkdown(data: SessionData): string {
   const workspaces = analysis?.workspaces || []
   const topWorkspace = workspaces[0]
   const topUrls = topWorkspace?.topUrls?.slice(0, 3) || []
-  const confidence = analysis?.aiConfidence || inferConfidence(analysis)
+  const confidence = analysis?.aiConfidence || analysis?.aiConfidenceLabel || inferConfidence(analysis)
 
   let md = `# FocusForge — Session Recap (${dateStr})\n\n`
 
@@ -147,10 +150,19 @@ export function generateSessionMarkdown(data: SessionData): string {
   }
 
   // AI guess clearly labeled + confidence
-  if (analysis?.resumeSummary) {
-    md += `## AI Summary (guess)\n\n`
-    md += `**Confidence:** ${confidence.toUpperCase()}\n\n`
-    md += `${analysis.resumeSummary}\n\n`
+  const groundedRecap = analysis?.aiRecap || analysis?.resumeSummary
+  if (groundedRecap) {
+    md += `## AI Summary (grounded)\n\n`
+    md += `**Confidence:** ${confidence.toString().toUpperCase()}\n\n`
+    md += `Note: AI summary is based on URLs/titles only (no content).\n\n`
+    md += `${groundedRecap}\n\n`
+    if (analysis?.aiActions?.length) {
+      md += `**Grounded action items:**\n`
+      analysis.aiActions.slice(0, 3).forEach((action) => {
+        md += `- ${action}\n`
+      })
+      md += `\n`
+    }
   }
 
   // Action Plan (make it executable)

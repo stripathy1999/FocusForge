@@ -29,7 +29,16 @@ async function getState() {
 }
 
 async function setState(update) {
-  await chrome.storage.local.set(update);
+  const removeKeys = Object.entries(update)
+    .filter(([, value]) => value === undefined)
+    .map(([key]) => key);
+  if (removeKeys.length) {
+    await chrome.storage.local.remove(removeKeys);
+  }
+  const filtered = Object.fromEntries(
+    Object.entries(update).filter(([, value]) => value !== undefined),
+  );
+  await chrome.storage.local.set(filtered);
 }
 
 async function getBaseUrl() {

@@ -27,12 +27,13 @@ except ImportError:
 
 GEMINI_PROMPT = """You are FocusForge, an AI agent that analyzes browser activity from a single focus session. You have access to tools for calendar and email to provide better context and suggestions.
 
-CRITICAL: resumeSummary Guidelines
-- Write in natural, conversational language (1-2 sentences)
-- Group activities by INTENTION/PURPOSE, not by individual websites
-- Use SERVICE NAMES (e.g., "Canva", "Netflix", "Google Docs", "GitHub") - NEVER use full URLs or domains
-- Describe WHAT the user was doing, not WHERE they were browsing
-- Use action verbs: designing, researching, applying, coding, learning, etc.
+CRITICAL: Grounded summary rules
+- Use ONLY the provided domains, titles, durations, lastStop, and goal
+- Do NOT invent what the user was doing unless directly supported by titles/domains
+- aiRecap must be 2-3 sentences
+- aiActions must be exactly 3 items, each explicitly mentioning a domain string from the input
+- aiConfidenceScore must be between 0 and 1
+- If confidence is low, still return grounded text; do not hallucinate
 
 TOOL USE GUIDELINES:
 - Use get_upcoming_events to check user's calendar when suggesting meeting times or understanding schedule conflicts
@@ -41,17 +42,23 @@ TOOL USE GUIDELINES:
 - Use draft_email when user's activity suggests they need to send an email (always draft first, never send directly)
 - Only use tools when they add value to the analysis - don't call tools unnecessarily
 
-Examples of GOOD summaries:
-✓ "You were switching between designing on Canva and applying for jobs on Netflix"
-✓ "You spent time researching on Wikipedia and coding on GitHub"
-✓ "You were working on job applications, switching between LinkedIn and company career pages"
-
 Other constraints: limit workspaces to max 5. nextActions max 5 and each starts with a verb. pendingDecisions max 3. Do not invent websites, events, or facts not in the input. lastStop.url must be present in the input events. Labels should be short and human-friendly.
 
 Return ONLY valid JSON that matches the schema below. No backticks. No explanations.
 
 Schema:
-{ "goalInferred":"string", "workspaces":[{"label":"string","timeSec":0,"topUrls":["string"]}], "resumeSummary":"string", "lastStop":{"label":"string","url":"string"}, "nextActions":["string"], "pendingDecisions":["string"] }"""
+{
+  "goalInferred":"string",
+  "workspaces":[{"label":"string","timeSec":0,"topUrls":["string"]}],
+  "lastStop":{"label":"string","url":"string"},
+  "aiRecap":"string",
+  "aiActions":["string","string","string"],
+  "aiConfidenceScore":0,
+  "aiConfidenceLabel":"low|medium|high",
+  "resumeSummary":"string",
+  "nextActions":["string"],
+  "pendingDecisions":["string"]
+}"""
 
 
 def extract_service_name(url: str) -> str:
@@ -346,7 +353,8 @@ def analyzeSessionWithGeminiAndTools(
             )
             
             # Validate the result (import from original file)
-            from gemini_analyzer import validate_output
+            from gemini_analyzer import normalize_ai_fields, validate_output
+            gemini_result = normalize_ai_fields(gemini_result)
             validate_output(gemini_result, events)
             
             return gemini_result
