@@ -384,17 +384,26 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               >
                 {sessionTitle}
               </h1>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <div className="flex flex-wrap items-center gap-2 text-xs" style={{ fontFamily: 'var(--font-lato), sans-serif', color: '#8f8f9f' }}>
                 <span>Session ID:</span>
                 <code
-                  className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-700"
+                  className="rounded px-2 py-0.5 text-[11px] font-medium"
+                  style={{ 
+                    backgroundColor: '#9ED5FF', 
+                    color: '#32578E',
+                    fontFamily: 'var(--font-lato), sans-serif'
+                  }}
                   title={session.id}
                 >
                   {shortSessionId}
                 </code>
                 <button
                   type="button"
-                  className="text-xs text-blue-600 hover:underline"
+                  className="text-xs transition-colors hover:opacity-80"
+                  style={{ 
+                    color: '#4777B9',
+                    fontFamily: 'var(--font-lato), sans-serif'
+                  }}
                   onClick={() => {
                     navigator.clipboard.writeText(session.id);
                     setCopiedItem(`session-${session.id}`);
