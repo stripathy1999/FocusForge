@@ -216,6 +216,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const [taskSuggestions, setTaskSuggestions] = useState<string[]>([]);
   const [taskInsights, setTaskInsights] = useState<string[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [shakeTimelineTab, setShakeTimelineTab] = useState(false);
+  const [shakeResumeButton, setShakeResumeButton] = useState(false);
   const keyTimeline = showFullTimeline
     ? timeline
     : buildKeyTimeline(timeline, computedSummary.lastStop?.ts);
@@ -446,7 +448,11 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <button
                   type="button"
                   className="cursor-pointer rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-sm"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#32578E', borderColor: '#32578E' }}
+                  style={{ 
+                    fontFamily: 'var(--font-jura), sans-serif', 
+                    backgroundColor: '#32578E', 
+                    borderColor: '#32578E',
+                  }}
                   onClick={() =>
                     computedSummary.resumeUrls.length
                       ? handleReopen(computedSummary.resumeUrls)
@@ -616,9 +622,36 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     </p>
                     <div className="text-sm text-zinc-600">
                     <ul className="mt-2 list-disc pl-5">
-                      {heuristic.nextActions.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
+                      {heuristic.nextActions.map((item) => {
+                        const isReviewTabs = item === "Review your recent tabs";
+                        const isContinue = item === "Continue where you left off";
+                        return (
+                          <li 
+                            key={item}
+                            onClick={() => {
+                              if (isReviewTabs) {
+                                setActiveTab("timeline");
+                              } else if (isContinue && computedSummary.resumeUrls.length > 0) {
+                                handleReopen(computedSummary.resumeUrls);
+                              }
+                            }}
+                            className={isReviewTabs || isContinue ? "cursor-pointer" : ""}
+                          >
+                            {isReviewTabs ? (
+                              <>
+                                Review your{" "}
+                                <span style={{ color: '#4777B9', fontFamily: 'var(--font-jura), sans-serif' }}>recent tabs</span>
+                              </>
+                            ) : isContinue ? (
+                              <>
+                                <span style={{ color: '#4777B9', fontFamily: 'var(--font-jura), sans-serif' }}>Continue</span> where you left off
+                              </>
+                            ) : (
+                              item
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                     </div>
                   </div>
