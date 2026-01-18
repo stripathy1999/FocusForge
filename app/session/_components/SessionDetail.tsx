@@ -226,11 +226,13 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
     (event) => event.type !== "STOP",
   );
   const [showFullTimeline, setShowFullTimeline] = useState(false);
-  const [activeTab, setActiveTab] = useState<"workspaces" | "timeline" | "tasks">("workspaces");
+  const [activeTab, setActiveTab] = useState<"workspaces" | "timeline" | "tasks">("tasks");
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [taskSuggestions, setTaskSuggestions] = useState<string[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [shakeTimelineTab, setShakeTimelineTab] = useState(false);
+  const [shakeResumeButton, setShakeResumeButton] = useState(false);
   const keyTimeline = showFullTimeline
     ? timeline
     : buildKeyTimeline(timeline, computedSummary.lastStop?.ts);
@@ -338,7 +340,18 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
 
 
   return (
-    <div className="min-h-screen px-6 py-10 text-zinc-900" style={{ backgroundColor: '#BDE8F5' }}>
+    <div 
+      className="min-h-screen px-6 py-10 text-zinc-900" 
+      style={{ 
+        backgroundColor: '#BDE8F5',
+        backgroundImage: `
+          radial-gradient(circle, rgba(50, 87, 142, 0.2) 1.5px, transparent 1.5px),
+          repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px),
+          repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0, 0, 0, 0.02) 2px, rgba(0, 0, 0, 0.02) 4px)
+        `,
+        backgroundSize: "28px 28px, 3px 3px, 3px 3px",
+      }}
+    >
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <header className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-4">
@@ -352,17 +365,26 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               >
                 {sessionTitle}
               </h1>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <div className="flex flex-wrap items-center gap-2 text-xs" style={{ fontFamily: 'var(--font-lato), sans-serif', color: '#8f8f9f' }}>
                 <span>Session ID:</span>
                 <code
-                  className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-700"
+                  className="rounded px-2 py-0.5 text-[11px] font-medium"
+                  style={{ 
+                    backgroundColor: '#9ED5FF', 
+                    color: '#32578E',
+                    fontFamily: 'var(--font-lato), sans-serif'
+                  }}
                   title={session.id}
                 >
                   {shortSessionId}
                 </code>
                 <button
                   type="button"
-                  className="text-xs text-blue-600 hover:underline"
+                  className="text-xs transition-colors hover:opacity-80"
+                  style={{ 
+                    color: '#4777B9',
+                    fontFamily: 'var(--font-lato), sans-serif'
+                  }}
                   onClick={() => {
                     navigator.clipboard.writeText(session.id);
                     setCopiedItem(`session-${session.id}`);
@@ -455,7 +477,11 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <button
                   type="button"
                   className="cursor-pointer rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-sm"
-                  style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#32578E', borderColor: '#32578E' }}
+                  style={{ 
+                    fontFamily: 'var(--font-jura), sans-serif', 
+                    backgroundColor: '#32578E', 
+                    borderColor: '#32578E',
+                  }}
                   onClick={() =>
                     computedSummary.resumeUrls.length
                       ? handleReopen(computedSummary.resumeUrls)
@@ -467,19 +493,17 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M3 8L6 11L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    RESUME
+                    Resume Session
                   </span>
                 </button>
-              </div>
-              
-              {/* Opennote Export Buttons */}
-              <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-zinc-200">
+                
+                {/* Opennote Export Buttons */}
                 {journalUrl ? (
                   <a
                     href={journalUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm text-center"
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm text-center transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90"
                     style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#4777B9', borderColor: '#4777B9' }}
                   >
                     ✅ Exported — Open in Opennote
@@ -489,7 +513,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     type="button"
                     onClick={handleExportJournal}
                     disabled={exportingJournal}
-                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-sm"
                     style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#4777B9', borderColor: '#4777B9' }}
                   >
                     {exportingJournal ? 'Exporting...' : 'Export to Opennote Journal'}
@@ -500,6 +524,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   <p className="text-xs text-red-600 mt-1">{exportError}</p>
                 )}
               </div>
+              <hr className="border-zinc-200 my-6" />
               {heuristic && (
                 <div className="text-sm text-zinc-700">
                     <p className="text-base font-extrabold uppercase tracking-wide" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
@@ -568,39 +593,67 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       ))}
                     </div>
                   )}
+                  <div className="mt-4">
+                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
+                      Review top 3 pages visited
+                    </p>
+                    <ul className="mt-2 list-disc pl-5 text-sm">
+                      {(computedSummary.topPages ?? []).length === 0 ? (
+                        <li className="text-zinc-600">No pages yet.</li>
+                      ) : (
+                        (computedSummary.topPages ?? []).map((page) => (
+                          <li key={page.url}>
+                            <button
+                              type="button"
+                              className="cursor-pointer truncate text-left underline-offset-4 hover:underline"
+                              style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                              title={page.url}
+                              onClick={() => handleReopen([page.url])}
+                            >
+                              {page.title}
+                            </button>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
                   <div className="mt-3">
                     <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
                       Next actions:
                     </p>
                     <div className="text-sm text-zinc-600">
                     <ul className="mt-2 list-disc pl-5">
-                      {heuristic.nextActions.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
-                      Review top 3 pages visited
-                    </p>
-                    <div className="space-y-1 text-sm">
-                      {(computedSummary.topPages ?? []).length === 0 ? (
-                        <p className="text-zinc-600">No pages yet.</p>
-                      ) : (
-                        (computedSummary.topPages ?? []).map((page) => (
-                          <button
-                            key={page.url}
-                            type="button"
-                            className="cursor-pointer block w-full truncate text-left underline-offset-4 hover:underline"
-                            style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                            title={page.url}
-                            onClick={() => handleReopen([page.url])}
+                      {heuristic.nextActions.map((item) => {
+                        const isReviewTabs = item === "Review your recent tabs";
+                        const isContinue = item === "Continue where you left off";
+                        return (
+                          <li 
+                            key={item}
+                            onClick={() => {
+                              if (isReviewTabs) {
+                                setActiveTab("timeline");
+                              } else if (isContinue && computedSummary.resumeUrls.length > 0) {
+                                handleReopen(computedSummary.resumeUrls);
+                              }
+                            }}
+                            className={isReviewTabs || isContinue ? "cursor-pointer" : ""}
                           >
-                            {page.title}
-                          </button>
-                        ))
-                      )}
+                            {isReviewTabs ? (
+                              <>
+                                Review your{" "}
+                                <span style={{ color: '#4777B9', fontFamily: 'var(--font-jura), sans-serif' }}>recent tabs</span>
+                              </>
+                            ) : isContinue ? (
+                              <>
+                                <span style={{ color: '#4777B9', fontFamily: 'var(--font-jura), sans-serif' }}>Continue</span> where you left off
+                              </>
+                            ) : (
+                              item
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
                     </div>
                   </div>
                 </div>
@@ -757,6 +810,21 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <div className="flex gap-2">
                   <button
                     type="button"
+                    onClick={() => setActiveTab("tasks")}
+                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                      activeTab === "tasks"
+                        ? "text-white hover:opacity-90"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
+                    }`}
+                    style={{
+                      fontFamily: 'var(--font-jura), sans-serif',
+                      backgroundColor: activeTab === "tasks" ? '#32578E' : 'transparent',
+                    }}
+                  >
+                    Tasks
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setActiveTab("workspaces")}
                     className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       activeTab === "workspaces"
@@ -784,21 +852,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     }}
                   >
                     Timeline
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("tasks")}
-                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                      activeTab === "tasks"
-                        ? "text-white hover:opacity-90"
-                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
-                    }`}
-                    style={{
-                      fontFamily: 'var(--font-jura), sans-serif',
-                      backgroundColor: activeTab === "tasks" ? '#32578E' : 'transparent',
-                    }}
-                  >
-                    Tasks
                   </button>
                 </div>
               </div>
