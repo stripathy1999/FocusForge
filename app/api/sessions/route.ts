@@ -21,12 +21,18 @@ export async function GET() {
     sessions.map(async (session) => {
       const events = await getEvents(session.id);
       const summary = computeSummary(session, events);
-      const durationSec = summary.timeline.reduce((total, event) => {
+      const timelineDurationSec = summary.timeline.reduce((total, event) => {
         if (event.type !== "TAB_ACTIVE") {
           return total;
         }
         return total + (event.durationSec ?? 0);
       }, 0);
+      const fallbackDurationSec =
+        session.ended_at && session.started_at
+          ? Math.max(0, Math.round((session.ended_at - session.started_at) / 1000))
+          : 0;
+      const durationSec =
+        timelineDurationSec > 0 ? timelineDurationSec : fallbackDurationSec;
       const topWorkspaces = summary.domains
         .slice(0, 2)
         .map((domain) => domain.label);
