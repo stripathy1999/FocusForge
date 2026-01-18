@@ -359,32 +359,44 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               </h1>
               <div className="flex flex-wrap items-center gap-2 text-xs" style={{ fontFamily: 'var(--font-lato), sans-serif', color: '#8f8f9f' }}>
                 <span>Session ID:</span>
-                <code
-                  className="rounded px-2 py-0.5 text-[11px] font-medium"
-                  style={{ 
-                    backgroundColor: '#9ED5FF', 
-                    color: '#32578E',
-                    fontFamily: 'var(--font-lato), sans-serif'
-                  }}
-                  title={session.id}
-                >
-                  {shortSessionId}
-                </code>
                 <button
                   type="button"
-                  className="text-xs transition-colors hover:opacity-80"
+                  className="rounded px-2 py-0.5 text-[11px] font-medium cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105"
                   style={{ 
-                    color: '#4777B9',
+                    backgroundColor: copiedItem === `session-${session.id}` ? '#22c55e' : '#9ED5FF', 
+                    color: copiedItem === `session-${session.id}` ? 'white' : '#32578E',
                     fontFamily: 'var(--font-lato), sans-serif'
                   }}
+                  title={copiedItem === `session-${session.id}` ? "Copied!" : "Click to copy session ID"}
                   onClick={() => {
                     navigator.clipboard.writeText(session.id);
                     setCopiedItem(`session-${session.id}`);
-                    setTimeout(() => setCopiedItem(null), 1500);
+                    setTimeout(() => setCopiedItem(null), 2000);
                   }}
-                  title="Copy session id"
                 >
-                  {copiedItem === `session-${session.id}` ? "Copied" : "Copy"}
+                  {copiedItem === `session-${session.id}` ? (
+                    <span className="flex items-center gap-1">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        style={{ color: "white" }}
+                      >
+                        <path
+                          d="M3 8L6 11L13 4"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      Copied!
+                    </span>
+                  ) : (
+                    shortSessionId
+                  )}
                 </button>
               </div>
               <div className="flex flex-wrap gap-3 text-sm text-zinc-600">
@@ -1185,26 +1197,17 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-base font-semibold" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                  <span className="text-base font-semibold flex-shrink-0" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
                                     {task.title}
                                   </span>
-                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                    task.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                    task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-blue-100 text-blue-700'
-                                  }`}>
-                                    {task.priority}
+                                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border whitespace-nowrap flex-shrink-0 ${
+                                    task.priority === 'high' ? 'bg-red-100 text-red-700 border-red-300' :
+                                    task.priority === 'medium' ? 'bg-yellow-200 text-yellow-900 border-yellow-400 border-2' :
+                                    'bg-blue-100 text-blue-700 border-blue-300'
+                                  }`} style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
+                                    Priority: {task.priority}
                                   </span>
-                                  {task.urgency && (
-                                    <span className={`px-2 py-1 text-xs rounded-full ${
-                                      task.urgency === 'urgent' ? 'bg-orange-100 text-orange-700' :
-                                      task.urgency === 'soon' ? 'bg-amber-100 text-amber-700' :
-                                      'bg-gray-100 text-gray-700'
-                                    }`}>
-                                      {task.urgency}
-                                    </span>
-                                  )}
                                 </div>
                                 {task.reason && (
                                   <p className="text-sm text-zinc-600 mb-2">{task.reason}</p>
@@ -1214,34 +1217,18 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                 )}
                                 {task.estimatedTime && (
                                   <p className="text-xs text-zinc-500 mt-2">
-                                    ⏱️ Estimated: {task.estimatedTime}
+                                    Estimated: {task.estimatedTime}
                                   </p>
                                 )}
                                 {task.dependencies && task.dependencies.length > 0 && (
                                   <p className="text-xs text-zinc-500 mt-1">
-                                    🔗 Depends on: {task.dependencies.join(', ')}
+                                    Depends on: {task.dependencies.join(', ')}
                                   </p>
                                 )}
                               </div>
                             </div>
                           </div>
                         ))}
-                        
-                        {taskSuggestions.length > 0 && (
-                          <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
-                            <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
-                              Strategic Suggestions
-                            </h3>
-                            <ul className="space-y-2">
-                              {taskSuggestions.map((suggestion: string, i: number) => (
-                                <li key={i} className="text-sm text-zinc-700 flex items-start gap-2">
-                                  <span className="text-[#4777B9] mt-1">•</span>
-                                  <span>{suggestion}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
                       </>
                     )}
                   </div>
