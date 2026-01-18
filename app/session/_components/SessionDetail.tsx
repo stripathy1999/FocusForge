@@ -210,7 +210,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
     (event) => event.type !== "STOP",
   );
   const [showFullTimeline, setShowFullTimeline] = useState(false);
-  const [activeTab, setActiveTab] = useState<"workspaces" | "timeline" | "tasks">("workspaces");
+  const [activeTab, setActiveTab] = useState<"workspaces" | "timeline" | "tasks">("tasks");
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [taskSuggestions, setTaskSuggestions] = useState<string[]>([]);
@@ -765,6 +765,21 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 <div className="flex gap-2">
                   <button
                     type="button"
+                    onClick={() => setActiveTab("tasks")}
+                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                      activeTab === "tasks"
+                        ? "text-white hover:opacity-90"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
+                    }`}
+                    style={{
+                      fontFamily: 'var(--font-jura), sans-serif',
+                      backgroundColor: activeTab === "tasks" ? '#32578E' : 'transparent',
+                    }}
+                  >
+                    Tasks
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setActiveTab("workspaces")}
                     className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       activeTab === "workspaces"
@@ -792,21 +807,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     }}
                   >
                     Timeline
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("tasks")}
-                    className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                      activeTab === "tasks"
-                        ? "text-white hover:opacity-90"
-                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
-                    }`}
-                    style={{
-                      fontFamily: 'var(--font-jura), sans-serif',
-                      backgroundColor: activeTab === "tasks" ? '#32578E' : 'transparent',
-                    }}
-                  >
-                    Tasks
                   </button>
                 </div>
               </div>
