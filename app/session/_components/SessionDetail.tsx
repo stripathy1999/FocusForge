@@ -294,313 +294,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
           </div>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <div className="flex flex-col gap-6">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              {/* Tab Navigation */}
-              <div className="flex items-center justify-between border-b border-zinc-200 pb-4 mb-4">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("workspaces")}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                      activeTab === "workspaces"
-                        ? "text-white"
-                        : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                    style={{
-                      fontFamily: 'var(--font-jura), sans-serif',
-                      backgroundColor: activeTab === "workspaces" ? '#32578E' : 'transparent',
-                    }}
-                  >
-                    Workspaces
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("timeline")}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                      activeTab === "timeline"
-                        ? "text-white"
-                        : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                    style={{
-                      fontFamily: 'var(--font-jura), sans-serif',
-                      backgroundColor: activeTab === "timeline" ? '#32578E' : 'transparent',
-                    }}
-                  >
-                    Timeline
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("tasks")}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                      activeTab === "tasks"
-                        ? "text-white"
-                        : "text-zinc-600 hover:text-zinc-900"
-                    }`}
-                    style={{
-                      fontFamily: 'var(--font-jura), sans-serif',
-                      backgroundColor: activeTab === "tasks" ? '#32578E' : 'transparent',
-                    }}
-                  >
-                    Tasks
-                  </button>
-                </div>
-                {activeTab === "timeline" && (
-                  <button
-                    type="button"
-                    className="text-xs underline-offset-4 hover:underline"
-                    style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
-                    onClick={() => setShowFullTimeline((value) => !value)}
-                  >
-                    {showFullTimeline ? "Show key moments" : "View full timeline"}
-                  </button>
-                )}
-              </div>
-              {/* Tab Content */}
-              <div>
-                {activeTab === "workspaces" && (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {computedSummary.domains.length === 0 ? (
-                      <p className="text-sm text-zinc-500">
-                        No workspace data yet.
-                      </p>
-                    ) : (
-                      computedSummary.domains.map((domain) => (
-                        <div
-                          key={domain.domain}
-                          className={`group rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
-                            domain.topUrls.length > 0
-                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            if (domain.topUrls.length > 0) {
-                              handleReopen(domain.topUrls);
-                            }
-                          }}
-                        >
-                          <div className="flex items-center justify-between text-sm">
-                            <div>
-                              <span
-                                className="font-semibold"
-                                style={{
-                                  fontFamily: "var(--font-jura), sans-serif",
-                                  color: "#32578E",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {domain.label}
-                              </span>
-                            </div>
-                            <span className="text-zinc-600">
-                              {formatDuration(domain.timeSec)}
-                            </span>
-                          </div>
-                          <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-400">
-                            {domain.topUrls.length === 0 ? (
-                              <span>No URLs captured.</span>
-                            ) : (
-                              domain.topUrls.map((url) => (
-                                <a
-                                  key={url}
-                                  href={url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="truncate underline-offset-4 hover:underline text-zinc-400"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {url}
-                                </a>
-                              ))
-                            )}
-                          </div>
-                          {domain.topUrls.length > 0 && (
-                            <button
-                              type="button"
-                              className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                              style={{
-                                fontFamily: "var(--font-jura), sans-serif",
-                                color: "#4777B9",
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleReopen(domain.topUrls);
-                              }}
-                            >
-                              Click to reopen workspace
-                            </button>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-
-                {activeTab === "timeline" && (
-                  <div className="flex flex-col gap-4">
-                    {!showFullTimeline && (
-                      <p className="text-xs text-zinc-500">
-                        Showing key moments · View full timeline
-                      </p>
-                    )}
-                    {keyTimeline.length === 0 ? (
-                      <p className="text-sm text-zinc-500">
-                        No events recorded yet.
-                      </p>
-                    ) : showFullTimeline ? (
-                      keyTimeline.map((event, index) => (
-                        <div
-                          key={`${event.ts}-${event.type}-${event.url || ''}-${index}`}
-                          className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
-                            event.url && event.type !== "BREAK"
-                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
-                              : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
-                          }`}
-                        >
-                          {event.type === "BREAK" ? (
-                            <div className="text-xs text-zinc-500">
-                              <div className="font-medium font-jura text-zinc-700">
-                                Break detected ({formatDuration(event.durationSec)}) —
-                                not counted
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                                <span
-                                  className="font-semibold"
-                                  style={{
-                                    fontFamily: "var(--font-jura), sans-serif",
-                                    color: "#32578E",
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {event.title || "Untitled tab"}
-                                </span>
-                                <span className="text-sm text-zinc-600">
-                                  {formatDate(event.ts)}
-                                </span>
-                              </div>
-                              <div className="mt-1 flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 text-xs text-zinc-500">
-                                  {event.url ? (
-                                    <>
-                                      <span className="truncate" title={event.url}>
-                                        {shortenUrl(event.url)}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
-                                        title="Copy URL"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigator.clipboard.writeText(event.url);
-                                        }}
-                                      >
-                                        <svg
-                                          width="14"
-                                          height="14"
-                                          viewBox="0 0 16 16"
-                                          fill="none"
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          style={{ color: "#4777B9" }}
-                                        >
-                                          <path
-                                            d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
-                                            stroke="currentColor"
-                                            strokeWidth="1.2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                          />
-                                        </svg>
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <span>No URL</span>
-                                  )}
-                                </div>
-                                <span className="text-sm text-zinc-600">
-                                  Duration: {formatDuration(event.durationSec)}
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      collapsedTimeline.map((item) => (
-                        <div
-                          key={item.key}
-                          className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
-                            item.type === "group" && item.url
-                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
-                              : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
-                          }`}
-                        >
-                          {item.type === "break" ? (
-                            <div className="text-xs text-zinc-500">
-                              <div className="font-medium text-zinc-700">
-                                Break detected ({formatDuration(item.durationSec)}) —
-                                not counted
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                                <span
-                                  className="font-semibold"
-                                  style={{
-                                    fontFamily: "var(--font-jura), sans-serif",
-                                    color: "#32578E",
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {item.title || "Untitled tab"}
-                                </span>
-                                <span className="text-sm text-zinc-600">
-                                  {formatDate(item.ts)}
-                                </span>
-                              </div>
-                              <div className="mt-1 flex items-center justify-between gap-2 text-xs text-zinc-500">
-                                <span>{item.label}</span>
-                                <span>
-                                  {item.visits > 1
-                                    ? `${item.visits} visits · ${formatDuration(
-                                        item.durationSec,
-                                      )}`
-                                    : `Duration: ${formatDuration(item.durationSec)}`}
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))
-                    )}
-                    {session.status === "ended" && (
-                      <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
-                        Session ended {formatDate(session.ended_at)}.
-                      </div>
-                    )}
-                    {session.status === "auto_ended" && (
-                      <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
-                        Session auto-ended after inactivity.
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === "tasks" && (
-                  <div className="flex flex-col gap-4">
-                    <p className="text-sm text-zinc-500">
-                      AI-generated tasks will appear here.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
+        <section className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <aside className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 
@@ -948,6 +642,347 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               </div>
             </div>
           </aside>
+
+          <div className="flex flex-col gap-6">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+              {/* Tab Navigation */}
+              <div className="flex items-center justify-between border-b border-zinc-200 pb-4 mb-4">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("workspaces")}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                      activeTab === "workspaces"
+                        ? "text-white"
+                        : "text-zinc-600 hover:text-zinc-900"
+                    }`}
+                    style={{
+                      fontFamily: 'var(--font-jura), sans-serif',
+                      backgroundColor: activeTab === "workspaces" ? '#32578E' : 'transparent',
+                    }}
+                  >
+                    Workspaces
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("timeline")}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                      activeTab === "timeline"
+                        ? "text-white"
+                        : "text-zinc-600 hover:text-zinc-900"
+                    }`}
+                    style={{
+                      fontFamily: 'var(--font-jura), sans-serif',
+                      backgroundColor: activeTab === "timeline" ? '#32578E' : 'transparent',
+                    }}
+                  >
+                    Timeline
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("tasks")}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                      activeTab === "tasks"
+                        ? "text-white"
+                        : "text-zinc-600 hover:text-zinc-900"
+                    }`}
+                    style={{
+                      fontFamily: 'var(--font-jura), sans-serif',
+                      backgroundColor: activeTab === "tasks" ? '#32578E' : 'transparent',
+                    }}
+                  >
+                    Tasks
+                  </button>
+                </div>
+              </div>
+              {/* Tab Content */}
+              <div>
+                {activeTab === "workspaces" && (
+                  <div className="flex flex-col gap-4">
+                    {computedSummary.domains.length === 0 ? (
+                      <p className="text-sm text-zinc-500">
+                        No workspace data yet.
+                      </p>
+                    ) : (
+                      computedSummary.domains.map((domain) => (
+                        <div
+                          key={domain.domain}
+                          className={`group rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
+                            domain.topUrls.length > 0
+                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            if (domain.topUrls.length > 0) {
+                              handleReopen(domain.topUrls);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between text-sm">
+                            <div>
+                              <span
+                                className="font-semibold"
+                                style={{
+                                  fontFamily: "var(--font-jura), sans-serif",
+                                  color: "#32578E",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {domain.label}
+                              </span>
+                            </div>
+                            <span className="text-zinc-600">
+                              {formatDuration(domain.timeSec)}
+                            </span>
+                          </div>
+                          <div className="mt-3 flex flex-col gap-1 text-xs text-zinc-400">
+                            {domain.topUrls.length === 0 ? (
+                              <span>No URLs captured.</span>
+                            ) : (
+                              domain.topUrls.map((url) => (
+                                <a
+                                  key={url}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="truncate underline-offset-4 hover:underline text-zinc-400"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {url}
+                                </a>
+                              ))
+                            )}
+                          </div>
+                          {domain.topUrls.length > 0 && (
+                            <button
+                              type="button"
+                              className="mt-3 inline-flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                              style={{
+                                fontFamily: "var(--font-jura), sans-serif",
+                                color: "#4777B9",
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReopen(domain.topUrls);
+                              }}
+                            >
+                              Click to reopen workspace
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "timeline" && (
+                  <div className="flex flex-col gap-4">
+                    {!showFullTimeline && (
+                      <button
+                        type="button"
+                        className="text-xs underline-offset-4 hover:underline"
+                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                        onClick={() => setShowFullTimeline((value) => !value)}
+                      >
+                        View full timeline
+                      </button>
+                    )}
+                    {showFullTimeline && (
+                      <button
+                        type="button"
+                        className="text-xs underline-offset-4 hover:underline"
+                        style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}
+                        onClick={() => setShowFullTimeline((value) => !value)}
+                      >
+                        View key moments
+                      </button>
+                    )}
+                    {keyTimeline.length === 0 ? (
+                      <p className="text-sm text-zinc-500">
+                        No events recorded yet.
+                      </p>
+                    ) : showFullTimeline ? (
+                      keyTimeline.map((event, index) => (
+                        <div
+                          key={`${event.ts}-${event.type}-${event.url || ''}-${index}`}
+                          className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
+                            event.url && event.type !== "BREAK"
+                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
+                          }`}
+                        >
+                          {event.type === "BREAK" ? (
+                            <div className="text-xs text-zinc-500">
+                              <div className="font-medium font-jura text-zinc-700">
+                                Break detected ({formatDuration(event.durationSec)}) —
+                                not counted
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                <span
+                                  className="font-semibold"
+                                  style={{
+                                    fontFamily: "var(--font-jura), sans-serif",
+                                    color: "#32578E",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {event.title || "Untitled tab"}
+                                </span>
+                                <span className="text-sm text-zinc-600">
+                                  {formatDate(event.ts)}
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                                  {event.url ? (
+                                    <>
+                                      <span className="truncate" title={event.url}>
+                                        {shortenUrl(event.url)}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
+                                        title="Copy URL"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigator.clipboard.writeText(event.url);
+                                        }}
+                                      >
+                                        <svg
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 16 16"
+                                          fill="none"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          style={{ color: "#4777B9" }}
+                                        >
+                                          <path
+                                            d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
+                                            stroke="currentColor"
+                                            strokeWidth="1.2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          />
+                                        </svg>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span>No URL</span>
+                                  )}
+                                </div>
+                                <span className="text-sm text-zinc-600">
+                                  Duration: {formatDuration(event.durationSec)}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      collapsedTimeline.map((item) => (
+                        <div
+                          key={item.key}
+                          className={`rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 ${
+                            item.type === "group" && item.url
+                              ? "cursor-pointer hover:border-[#32578E] hover:bg-white hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5"
+                              : "hover:border-zinc-200 hover:bg-white hover:shadow-md"
+                          }`}
+                        >
+                          {item.type === "break" ? (
+                            <div className="text-xs text-zinc-500">
+                              <div className="font-medium text-zinc-700">
+                                Break detected ({formatDuration(item.durationSec)}) —
+                                not counted
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                <span
+                                  className="font-semibold"
+                                  style={{
+                                    fontFamily: "var(--font-jura), sans-serif",
+                                    color: "#32578E",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {item.title || "Untitled tab"}
+                                </span>
+                                <span className="text-sm text-zinc-600">
+                                  {formatDate(item.ts)}
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between gap-2 text-xs text-zinc-500">
+                                <div className="flex items-center gap-2">
+                                  <span>{item.label}</span>
+                                  {item.url && (
+                                    <button
+                                      type="button"
+                                      className="flex-shrink-0 rounded p-1 hover:bg-zinc-200 transition-colors"
+                                      title="Copy URL"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(item.url);
+                                      }}
+                                    >
+                                      <svg
+                                        width="14"
+                                        height="14"
+                                        viewBox="0 0 16 16"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        style={{ color: "#4777B9" }}
+                                      >
+                                        <path
+                                          d="M5.5 4.5H3.5C2.67157 4.5 2 5.17157 2 6V12.5C2 13.3284 2.67157 14 3.5 14H10C10.8284 14 11.5 13.3284 11.5 12.5V10.5M5.5 4.5C5.5 3.67157 6.17157 3 7 3H11.5C12.3284 3 13 3.67157 13 4.5V9C13 9.82843 12.3284 10.5 11.5 10.5H7C6.17157 10.5 5.5 9.82843 5.5 9V4.5Z"
+                                          stroke="currentColor"
+                                          strokeWidth="1.2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </div>
+                                <span>
+                                  {item.visits > 1
+                                    ? `${item.visits} visits · ${formatDuration(
+                                        item.durationSec,
+                                      )}`
+                                    : `Duration: ${formatDuration(item.durationSec)}`}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))
+                    )}
+                    {session.status === "ended" && (
+                      <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
+                        Session ended {formatDate(session.ended_at)}.
+                      </div>
+                    )}
+                    {session.status === "auto_ended" && (
+                      <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
+                        Session auto-ended after inactivity.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "tasks" && (
+                  <div className="flex flex-col gap-4">
+                    <p className="text-sm text-zinc-500">
+                      AI-generated tasks will appear here.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </section>
       </div>
     </div>
