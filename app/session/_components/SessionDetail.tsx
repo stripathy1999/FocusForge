@@ -212,6 +212,10 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
   const [showFullTimeline, setShowFullTimeline] = useState(false);
   const [activeTab, setActiveTab] = useState<"workspaces" | "timeline" | "tasks">("workspaces");
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [taskSuggestions, setTaskSuggestions] = useState<string[]>([]);
+  const [taskInsights, setTaskInsights] = useState<string[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
   const keyTimeline = showFullTimeline
     ? timeline
     : buildKeyTimeline(timeline, computedSummary.lastStop?.ts);
@@ -249,6 +253,39 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
       JSON.stringify(next.slice(0, 3)),
     );
   }, [computedSummary, session]);
+
+  // Load tasks when tasks tab is opened
+  useEffect(() => {
+    if (activeTab === 'tasks' && tasks.length === 0 && !loadingTasks) {
+      loadTasks();
+    }
+  }, [activeTab]);
+
+  const loadTasks = async () => {
+    setLoadingTasks(true);
+    try {
+      const response = await fetch(`/api/session/${session.id}/plan`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.taskPlan) {
+          // Sort tasks by taskOrder if available
+          const orderedTasks = data.taskPlan.taskOrder 
+            ? data.taskPlan.taskOrder.map((taskId: string) => 
+                data.taskPlan.prioritizedTasks.find((t: any) => t.id === taskId)
+              ).filter(Boolean)
+            : data.taskPlan.prioritizedTasks || [];
+          
+          setTasks(orderedTasks);
+          setTaskSuggestions(data.taskPlan.suggestions || []);
+          setTaskInsights(data.taskPlan.insights || []);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
 
   const handleReopen = (urls: string[]) => {
     window.postMessage({ type: "FOCUSFORGE_REOPEN", urls }, "*");
@@ -1096,9 +1133,96 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
 
                 {activeTab === "tasks" && (
                   <div className="flex flex-col gap-4">
-                    <p className="text-sm text-zinc-500">
-                      AI-generated tasks will appear here.
-                    </p>
+                    {loadingTasks ? (
+                      <p className="text-sm text-zinc-500">Loading tasks...</p>
+                    ) : tasks.length === 0 ? (
+                      <p className="text-sm text-zinc-500">
+                        No tasks generated yet. Tasks will be generated from your session analysis.
+                      </p>
+                    ) : (
+                      <>
+                        {tasks.map((task: any, index: number) => (
+                          <div
+                            key={task.id || index}
+                            className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 hover:border-[#32578E] hover:bg-white hover:shadow-lg"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-base font-semibold" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                                    {task.title}
+                                  </span>
+                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                    task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                    task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {task.priority}
+                                  </span>
+                                  {task.urgency && (
+                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                      task.urgency === 'urgent' ? 'bg-orange-100 text-orange-700' :
+                                      task.urgency === 'soon' ? 'bg-amber-100 text-amber-700' :
+                                      'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {task.urgency}
+                                    </span>
+                                  )}
+                                </div>
+                                {task.reason && (
+                                  <p className="text-sm text-zinc-600 mb-2">{task.reason}</p>
+                                )}
+                                {task.context && (
+                                  <p className="text-xs text-zinc-500 italic">{task.context}</p>
+                                )}
+                                {task.estimatedTime && (
+                                  <p className="text-xs text-zinc-500 mt-2">
+                                    ⏱️ Estimated: {task.estimatedTime}
+                                  </p>
+                                )}
+                                {task.dependencies && task.dependencies.length > 0 && (
+                                  <p className="text-xs text-zinc-500 mt-1">
+                                    🔗 Depends on: {task.dependencies.join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {taskSuggestions.length > 0 && (
+                          <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-4">
+                            <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#32578E' }}>
+                              Strategic Suggestions
+                            </h3>
+                            <ul className="space-y-2">
+                              {taskSuggestions.map((suggestion: string, i: number) => (
+                                <li key={i} className="text-sm text-zinc-700 flex items-start gap-2">
+                                  <span className="text-[#4777B9] mt-1">•</span>
+                                  <span>{suggestion}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {taskInsights.length > 0 && (
+                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                            <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4777B9' }}>
+                              Insights
+                            </h3>
+                            <ul className="space-y-2">
+                              {taskInsights.map((insight: string, i: number) => (
+                                <li key={i} className="text-sm text-zinc-600 flex items-start gap-2">
+                                  <span className="text-[#669EE6] mt-1">💡</span>
+                                  <span>{insight}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
