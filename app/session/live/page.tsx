@@ -26,7 +26,7 @@ export default function LiveSessionPage() {
           </div>
           <Link
             href="/"
-            className="flex items-center justify-center rounded-lg p-3 text-white shadow-sm transition-colors hover:opacity-90 shrink-0"
+            className="group flex items-center justify-center rounded-lg p-3 text-white shadow-sm transition-all duration-300 hover:opacity-90 hover:scale-110 shrink-0"
             style={{ backgroundColor: '#32578E' }}
             aria-label="Return to home"
           >
@@ -36,6 +36,7 @@ export default function LiveSessionPage() {
               viewBox="0 0 24 24" 
               fill="none" 
               xmlns="http://www.w3.org/2000/svg"
+              className="transition-transform duration-300 group-hover:rotate-360"
             >
               <path 
                 d="M19 12H5M5 12L12 19M5 12L12 5" 

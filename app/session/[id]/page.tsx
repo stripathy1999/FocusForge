@@ -37,15 +37,27 @@ export default async function SessionPage({
     return (
       <div className="min-h-screen px-6 py-12 text-zinc-900" style={{ backgroundColor: '#BDE8F5' }}>
         <div className="mx-auto w-full max-w-3xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold font-jura">Session not found</h1>
+          <h1
+            className="text-2xl font-semibold"
+            style={{
+              fontFamily: "var(--font-jura), sans-serif",
+              color: "#32578E",
+            }}
+          >
+            Session not found
+          </h1>
           <p className="mt-3 text-sm text-zinc-600">
             We could not find session {id}. Start a session from the
             extension and try again.
           </p>
           <Link
             href="/session/live"
-            className="mt-4 inline-block underline"
-            style={{ color: '#4777B9' }}
+            className="mt-4 inline-block cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90"
+            style={{
+              fontFamily: "var(--font-jura), sans-serif",
+              backgroundColor: "#32578E",
+              borderColor: "#32578E",
+            }}
           >
             Go to Live Session
           </Link>

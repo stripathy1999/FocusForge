@@ -41,6 +41,36 @@ async function apiPost(path, body) {
   });
 }
 
+async function apiGet(path) {
+  const url = `${DEFAULT_BASE_URL}${path}`;
+  return fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function verifyIntentSaved(sessionId, expectedIntent) {
+  try {
+    const response = await apiGet(`/api/session/${sessionId}`);
+    if (!response.ok) {
+      console.warn("Could not verify intent - session fetch failed:", response.status);
+      return false;
+    }
+    const data = await response.json();
+    const savedIntent = data.session?.intent_text || data.session?.intent_raw || "";
+    const matches = savedIntent.trim() === expectedIntent.trim();
+    if (matches) {
+      console.log("✓ Intent verified in session:", savedIntent);
+    } else {
+      console.warn("⚠ Intent mismatch. Expected:", expectedIntent, "Got:", savedIntent);
+    }
+    return matches;
+  } catch (error) {
+    console.error("Error verifying intent:", error);
+    return false;
+  }
+}
+
 function formatElapsed(ms) {
   if (ms < 0) return "0:00";
   const s = Math.floor(ms / 1000);
@@ -148,6 +178,22 @@ async function handleStart() {
     totalPausedMs: 0,
     pausedAt: null,
   });
+  
+  // Auto-save intent after starting session
+  console.log("Auto-saving intent:", intent);
+  const intentResponse = await apiPost("/api/session/intent", {
+    sessionId: data.sessionId,
+    intent,
+  });
+  if (!intentResponse.ok) {
+    const errorText = await intentResponse.text();
+    console.error("Failed to save intent:", intentResponse.status, errorText);
+    statusText.textContent = "Session started, but intent save failed";
+    statusText.className = "status status--error";
+  } else {
+    console.log("Intent saved successfully");
+  }
+  
   render(await getState());
 }
 
@@ -236,6 +282,24 @@ async function handleStartFresh() {
     autoEndedSessionId: undefined,
     intent,
   });
+  
+  // Auto-save intent after starting session
+  console.log("Auto-saving intent:", intent);
+  const intentResponse = await apiPost("/api/session/intent", {
+    sessionId: data.sessionId,
+    intent,
+  });
+  if (!intentResponse.ok) {
+    const errorText = await intentResponse.text();
+    console.error("Failed to save intent:", intentResponse.status, errorText);
+    statusText.textContent = "Session started, but intent save failed";
+    statusText.className = "status status--error";
+  } else {
+    console.log("✓ Intent save API call successful");
+    // Verify the intent was actually saved
+    await verifyIntentSaved(data.sessionId, intent);
+  }
+  
   render(await getState());
 }
 
@@ -308,14 +372,29 @@ copySessionIdBtn?.addEventListener("click", async () => {
       await navigator.clipboard.writeText(sessionId);
       const originalTitle = copySessionIdBtn.title;
       copySessionIdBtn.title = "Copied!";
-      // Visual feedback - change icon color temporarily
+      
+      // Replace copy icon with checkmark
       const svg = copySessionIdBtn.querySelector("svg");
       if (svg) {
-        const originalColor = svg.style.color;
-        svg.style.color = "#22c55e"; // green color for confirmation
+        const originalSVG = svg.outerHTML;
+        svg.outerHTML = `
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #22c55e">
+            <path
+              d="M3 8L6 11L13 4"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        `;
+        
         setTimeout(() => {
           copySessionIdBtn.title = originalTitle;
-          svg.style.color = originalColor;
+          const currentSvg = copySessionIdBtn.querySelector("svg");
+          if (currentSvg) {
+            currentSvg.outerHTML = originalSVG;
+          }
         }, 2000);
       } else {
         setTimeout(() => {

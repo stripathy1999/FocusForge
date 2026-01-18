@@ -324,7 +324,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
             </div>
             <Link
               href="/"
-              className="flex items-center justify-center rounded-lg p-3 text-white shadow-sm transition-colors hover:opacity-90 shrink-0"
+              className="group flex items-center justify-center rounded-lg p-3 text-white shadow-sm transition-all duration-300 hover:opacity-90 hover:scale-110 shrink-0"
               style={{ backgroundColor: '#32578E' }}
               aria-label="Return to home"
             >
@@ -334,6 +334,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 xmlns="http://www.w3.org/2000/svg"
+                className="transition-transform duration-300 group-hover:rotate-360"
               >
                 <path 
                   d="M19 12H5M5 12L12 19M5 12L12 5" 
@@ -396,7 +397,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
               <div className="flex flex-col gap-2 mt-4">
                 <button
                   type="button"
-                  className="cursor-pointer rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="cursor-pointer rounded-full px-4 py-2 text-base font-semibold text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-lg hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-sm"
                   style={{ fontFamily: 'var(--font-jura), sans-serif', backgroundColor: '#32578E', borderColor: '#32578E' }}
                   onClick={() =>
                     computedSummary.resumeUrls.length
@@ -530,7 +531,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         <button
                           key={action.label}
                           type="button"
-                          className="cursor-pointer rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-100"
+                          className="cursor-pointer rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-700 transition-all duration-200 hover:bg-zinc-100 hover:scale-105 hover:shadow-md"
                           onClick={() => handleReopen(action.urls)}
                         >
                           {action.label}
@@ -730,8 +731,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     onClick={() => setActiveTab("workspaces")}
                     className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       activeTab === "workspaces"
-                        ? "text-white"
-                        : "text-zinc-600 hover:text-zinc-900"
+                        ? "text-white hover:opacity-90"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
                     }`}
                     style={{
                       fontFamily: 'var(--font-jura), sans-serif',
@@ -745,8 +746,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     onClick={() => setActiveTab("timeline")}
                     className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       activeTab === "timeline"
-                        ? "text-white"
-                        : "text-zinc-600 hover:text-zinc-900"
+                        ? "text-white hover:opacity-90"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
                     }`}
                     style={{
                       fontFamily: 'var(--font-jura), sans-serif',
@@ -760,8 +761,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     onClick={() => setActiveTab("tasks")}
                     className={`cursor-pointer w-28 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                       activeTab === "tasks"
-                        ? "text-white"
-                        : "text-zinc-600 hover:text-zinc-900"
+                        ? "text-white hover:opacity-90"
+                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 hover:scale-105"
                     }`}
                     style={{
                       fontFamily: 'var(--font-jura), sans-serif',
