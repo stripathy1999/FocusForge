@@ -547,9 +547,23 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                             </div>
                           ) : (
                             <>
-                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600">
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                <span
+                                  className="font-semibold"
+                                  style={{
+                                    fontFamily: "var(--font-jura), sans-serif",
+                                    color: "#32578E",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {item.title || "Untitled tab"}
+                                </span>
+                                <span className="text-sm text-zinc-600">
+                                  {formatDate(item.ts)}
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between gap-2 text-xs text-zinc-500">
                                 <span>{item.label}</span>
-                                <span>{formatDate(item.ts)}</span>
                                 <span>
                                   {item.visits > 1
                                     ? `${item.visits} visits · ${formatDuration(
@@ -557,9 +571,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                       )}`
                                     : `Duration: ${formatDuration(item.durationSec)}`}
                                 </span>
-                              </div>
-                              <div className="mt-2 text-sm font-medium text-zinc-900">
-                                {item.title || "Untitled tab"}
                               </div>
                             </>
                           )}
