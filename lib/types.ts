@@ -35,6 +35,7 @@ export type DomainSummary = {
   type: "primary" | "support" | "drift";
   timeSec: number;
   topUrls: string[];
+  topTitles?: string[];
 };
 
 export type BackgroundSummary = {
@@ -75,6 +76,7 @@ export type ComputedSummary = {
     alignedTimeSec: number;
     offIntentTimeSec: number;
     neutralTimeSec: number;
+    unknownTimeSec: number;
     breakTimeSec: number;
     focusScorePct: number;
     displayFocusPct: number | null;

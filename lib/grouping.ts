@@ -136,6 +136,7 @@ function summarizeDomains(timeline: TimelineEvent[]): {
 } {
   const domainMap = new Map<string, DomainSummary>();
   const urlRecency = new Map<string, string[]>();
+  const titleRecency = new Map<string, string[]>();
   let backgroundTimeSec = 0;
   const backgroundUrls: string[] = [];
   const backgroundDomains = new Set<string>();
@@ -162,6 +163,7 @@ function summarizeDomains(timeline: TimelineEvent[]): {
       type: classification.type,
       timeSec: 0,
       topUrls: [],
+      topTitles: [],
     };
     summary.timeSec += duration;
     domainMap.set(domain, summary);
@@ -171,11 +173,18 @@ function summarizeDomains(timeline: TimelineEvent[]): {
       existing.unshift(event.url);
     }
     urlRecency.set(domain, existing);
+    const titles = titleRecency.get(domain) ?? [];
+    if (event.title && !titles.includes(event.title)) {
+      titles.unshift(event.title);
+    }
+    titleRecency.set(domain, titles);
   }
 
   for (const [domain, summary] of domainMap.entries()) {
     const urls = urlRecency.get(domain) ?? [];
     summary.topUrls = urls.slice(0, 5);
+    const titles = titleRecency.get(domain) ?? [];
+    summary.topTitles = titles.slice(0, 5);
   }
 
   const domains = Array.from(domainMap.values()).sort(
@@ -326,6 +335,9 @@ function buildFocusSummary(
   const neutralTimeSec = domains
     .filter((domain) => alignmentForDomain(intentTags, domain) === "neutral")
     .reduce((sum, domain) => sum + domain.timeSec, 0);
+  const unknownTimeSec = domains
+    .filter((domain) => alignmentForDomain(intentTags, domain) === "unknown")
+    .reduce((sum, domain) => sum + domain.timeSec, 0);
   const offIntentTimeSec = domains
     .filter((domain) => alignmentForDomain(intentTags, domain) === "off-intent")
     .reduce((sum, domain) => sum + domain.timeSec, 0);
@@ -346,6 +358,7 @@ function buildFocusSummary(
     alignedTimeSec,
     offIntentTimeSec,
     neutralTimeSec,
+    unknownTimeSec,
     breakTimeSec,
     focusScorePct,
     displayFocusPct,
@@ -355,20 +368,18 @@ function buildFocusSummary(
   };
 }
 
+type Alignment = "aligned" | "neutral" | "off-intent" | "unknown";
+
 function alignmentForDomain(
   intentTags: string[],
   domain: DomainSummary,
-): "aligned" | "neutral" | "off-intent" {
+): Alignment {
   if (intentTags.length === 0) {
     return "neutral";
   }
   const normalizedIntent = intentTags.join(" ").toLowerCase();
   const intentCategories = inferIntentCategories(intentTags);
-  const domainCategory = getDomainCategory(domain.domain);
-
-  if (!intentCategories.size) {
-    return "neutral";
-  }
+  const domainCategory = getDomainCategory(domain.domain, domain);
 
   if (
     normalizedIntent.includes(domain.domain) ||
@@ -377,16 +388,20 @@ function alignmentForDomain(
     return "aligned";
   }
 
+  if (!intentCategories.size) {
+    return "unknown";
+  }
+
   if (domainCategory && intentCategories.has(domainCategory)) {
     return "aligned";
   }
 
-  if (!domainCategory) {
+  if (domainCategory === "comms" || domainCategory === "dev_tools") {
     return "neutral";
   }
 
-  if (domainCategory === "comms" || domainCategory === "dev_tools") {
-    return "neutral";
+  if (!domainCategory) {
+    return "unknown";
   }
 
   return "off-intent";
@@ -438,7 +453,7 @@ function inferIntentCategories(intentTags: string[]): Set<string> {
   return categories;
 }
 
-function getDomainCategory(domain: string): string | null {
+function getDomainCategory(domain: string, summary?: DomainSummary): string | null {
   const normalized = domain.replace(/^www\./, "");
   if (DOMAIN_CATEGORY_MAP[normalized]) {
     return DOMAIN_CATEGORY_MAP[normalized];
@@ -446,7 +461,35 @@ function getDomainCategory(domain: string): string | null {
   const entry = Object.entries(DOMAIN_CATEGORY_MAP).find(([key]) =>
     normalized.endsWith(`.${key}`),
   );
-  return entry ? entry[1] : null;
+  if (entry) {
+    return entry[1];
+  }
+
+  const text = [
+    ...(summary?.topTitles ?? []),
+    ...(summary?.topUrls ?? []),
+    summary?.label ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  if (/(system design|leetcode|interview|dsa|oa)/.test(text)) {
+    return "interview_prep";
+  }
+  if (/(slides|docs|document|notes|google slides)/.test(text)) {
+    return "docs_writing";
+  }
+  if (/(capcut|premiere|after effects|davinci|timeline|export video)/.test(text)) {
+    return "video_editing";
+  }
+  if (/(netflix|youtube|movie|music|spotify|anime)/.test(text)) {
+    return "entertainment";
+  }
+  if (/(supabase|vercel|github|dashboard|deploy)/.test(text)) {
+    return "dev_tools";
+  }
+
+  return null;
 }
 
 function buildResumeUrls(

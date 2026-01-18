@@ -259,14 +259,15 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
     computedSummary.intent_tags?.length > 0
       ? computedSummary.intent_tags.join(", ")
       : computedSummary.intent_raw || "your intent";
-  const offIntentShare =
-    computedSummary.focus.totalTimeSec > 0
-      ? computedSummary.focus.offIntentTimeSec /
-        computedSummary.focus.totalTimeSec
-      : 0;
+  const unknownLarge =
+    computedSummary.focus.unknownTimeSec >= 30 &&
+    computedSummary.focus.unknownTimeSec >=
+      computedSummary.focus.offIntentTimeSec;
   const showMismatchPrompt =
     !computedSummary.focus.intentMissing &&
-    offIntentShare >= 0.4 &&
+    computedSummary.focus.alignedTimeSec === 0 &&
+    computedSummary.focus.offIntentTimeSec > 0 &&
+    unknownLarge &&
     Boolean(topWorkspace) &&
     !dismissedMismatch;
 
@@ -513,8 +514,8 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   {showMismatchPrompt && topWorkspace && (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                       <p>
-                        Your intent was {intentLabel}, but your browsing was
-                        mostly {topWorkspace.label}. Pick correct intent?
+                        Your intent was {intentLabel}, but your activity looks
+                        like {topWorkspace.label}. Update intent?
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
@@ -523,7 +524,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           disabled={intentUpdating}
                           onClick={() => handleIntentUpdate(topWorkspace.label)}
                         >
-                          Update intent to: {topWorkspace.label}
+                          Update intent for this session
                         </button>
                         <button
                           type="button"
@@ -531,7 +532,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           disabled={intentUpdating}
                           onClick={() => setDismissedMismatch(true)}
                         >
-                          Keep my intent
+                          Keep intent
                         </button>
                       </div>
                       {intentUpdateMessage && (
@@ -810,16 +811,18 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                     const a = computedSummary.focus.alignedTimeSec;
                     const o = computedSummary.focus.offIntentTimeSec;
                     const n = computedSummary.focus.neutralTimeSec;
-                    const total = a + o + n;
+                    const u = computedSummary.focus.unknownTimeSec;
+                    const total = a + o + n + u;
                     const pctA = total > 0 ? (a / total) * 100 : 0;
                     const pctO = total > 0 ? (o / total) * 100 : 0;
                     const pctN = total > 0 ? (n / total) * 100 : 100;
+                    const pctU = total > 0 ? (u / total) * 100 : 0;
                     return (
                       <div className="mt-3 space-y-2.5">
                         <div
                           className="flex min-h-[12px] w-full overflow-hidden rounded-full bg-zinc-200"
                           role="img"
-                          aria-label={`Aligned ${formatDuration(a)}, Off-intent ${formatDuration(o)}, Unclassified ${formatDuration(n)}`}
+                          aria-label={`Aligned ${formatDuration(a)}, Off-intent ${formatDuration(o)}, Neutral ${formatDuration(n)}, Unknown ${formatDuration(u)}`}
                         >
                           {total > 0 ? (
                             <>
@@ -848,7 +851,16 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                   backgroundColor: "#94a3b8",
                                   minWidth: n > 0 ? "2px" : undefined,
                                 }}
-                                title={`Unclassified: ${formatDuration(n)}`}
+                                title={`Neutral: ${formatDuration(n)}`}
+                              />
+                              <div
+                                className="h-full shrink-0"
+                                style={{
+                                  flex: `0 0 ${pctU}%`,
+                                  backgroundColor: "#cbd5f5",
+                                  minWidth: u > 0 ? "2px" : undefined,
+                                }}
+                                title={`Unknown: ${formatDuration(u)}`}
                               />
                             </>
                           ) : (
@@ -866,7 +878,11 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                           </span>
                           <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
                             <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#94a3b8" }} />
-                            Unclassified {formatDuration(n)}
+                            Neutral {formatDuration(n)}
+                          </span>
+                          <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                            <span className="h-2 w-2 rounded-sm shrink-0" style={{ backgroundColor: "#cbd5f5" }} />
+                            Unknown {formatDuration(u)}
                           </span>
                         </div>
                       </div>

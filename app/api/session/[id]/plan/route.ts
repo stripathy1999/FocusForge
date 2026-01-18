@@ -19,13 +19,19 @@ export async function GET(
     const analysis = await getAnalysis(id)
     const computedSummary = computeSummary(session, events, analysis)
 
+    const MIN_TASK_TIME_SEC = 30
+    const meaningfulWorkspaces = computedSummary.domains.filter(
+      (workspace) => workspace.timeSec >= MIN_TASK_TIME_SEC
+    )
+
     // Convert to planning agent format
     const analysisSummary = {
       goalInferred: '',
-      workspaces: computedSummary.domains.map(d => ({
+      workspaces: meaningfulWorkspaces.map(d => ({
         label: d.label,
         timeSec: d.timeSec,
-        topUrls: d.topUrls
+        topUrls: d.topUrls,
+        topTitles: d.topTitles
       })),
       resumeSummary: computedSummary.resumeSummary || '',
       lastStop: computedSummary.lastStop ? {
@@ -86,6 +92,31 @@ export async function GET(
 function createBasicTaskPlan(analysis: any): any {
   const nextActions = analysis.nextActions || []
   const pendingDecisions = analysis.pendingDecisions || []
+
+  if (!nextActions.length && !pendingDecisions.length) {
+    return {
+      prioritizedTasks: [
+        {
+          id: "task_1",
+          title:
+            "Pick the correct session intent (your browsing didn’t match the intent).",
+          priority: "high",
+          urgency: "now",
+          estimatedTime: "1 minute",
+          dependencies: [],
+          reason: "Fixes alignment accuracy",
+          context: "",
+        },
+      ],
+      taskOrder: ["task_1"],
+      suggestions: [
+        "Update intent so FocusForge can judge focus correctly.",
+      ],
+      insights: [
+        "No reliable next actions detected (not enough time on specific workspaces).",
+      ],
+    }
+  }
 
   const tasks: any[] = []
   const taskIds: string[] = []
