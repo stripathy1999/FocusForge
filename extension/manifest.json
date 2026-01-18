@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "FocusForge Tracker",
+  "version": "0.1.1",
+  "description": "Track active tab sessions for FocusForge.",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://focusforge-app-seven.vercel.app/*",
+    "https://focusforge-one.vercel.app/*",
+    "https://*.vercel.app/*",
+    "https://YOUR_DEPLOYED_DOMAIN/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "https://focusforge-app-seven.vercel.app/*",
+        "https://focusforge-one.vercel.app/*",
+        "https://*.vercel.app/*",
+        "https://YOUR_DEPLOYED_DOMAIN/*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
+}
