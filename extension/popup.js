@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "https://focusforge-app-seven.vercel.app";
+const DEFAULT_BASE_URL = "http://localhost:3000";
 
 const statusText = document.getElementById("statusText");
 const startBtn = document.getElementById("startBtn");
@@ -31,8 +31,66 @@ async function setState(update) {
   await chrome.storage.local.set(update);
 }
 
+async function getBaseUrl() {
+  await chrome.storage.local.set({ baseUrl: DEFAULT_BASE_URL });
+  return DEFAULT_BASE_URL;
+}
+
+function isLocalhostOrigin(origin) {
+  return (
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("http://127.0.0.1:")
+  );
+}
+
+async function detectBaseUrl() {
+  const detectedFromTabs = await detectBaseUrlFromKnownTabs();
+  if (detectedFromTabs) return detectedFromTabs;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.url || !tab.url.startsWith("http")) return null;
+    const url = new URL(tab.url);
+    const host = url.hostname;
+    const isLocalhost = host === "localhost" || host === "127.0.0.1";
+    const isVercel = host.endsWith("vercel.app");
+    const isFocusforge = host.endsWith("focusforge.app");
+    if (isLocalhost || isVercel || isFocusforge) {
+      return url.origin;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function detectBaseUrlFromKnownTabs() {
+  try {
+    const tabs = await chrome.tabs.query({
+      url: [
+        "http://localhost:3000/*",
+        "http://127.0.0.1:3000/*",
+        "https://*.vercel.app/*",
+        "https://*.focusforge.app/*",
+      ],
+    });
+    if (!tabs.length) return null;
+    const localhostTab = tabs.find((tab) =>
+      tab.url?.startsWith("http://localhost:3000"),
+    );
+    const localIpTab = tabs.find((tab) =>
+      tab.url?.startsWith("http://127.0.0.1:3000"),
+    );
+    const preferredTab = localhostTab || localIpTab || tabs[0];
+    if (!preferredTab?.url) return null;
+    return new URL(preferredTab.url).origin;
+  } catch {
+    return null;
+  }
+}
+
 async function apiPost(path, body) {
-  const url = `${DEFAULT_BASE_URL}${path}`;
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}${path}`;
   return fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -126,6 +184,7 @@ async function handleStart() {
     statusText.className = "status status--error";
     return;
   }
+  const baseUrl = await getBaseUrl();
   const response = await apiPost("/api/session/start", {
     intent,
   });
@@ -146,6 +205,7 @@ async function handleStart() {
     startedAt: Date.now(),
     totalPausedMs: 0,
     pausedAt: null,
+    baseUrl,
   });
   render(await getState());
 }
@@ -221,6 +281,7 @@ async function handleStartFresh() {
     statusText.className = "status status--error";
     return;
   }
+  const baseUrl = await getBaseUrl();
   const response = await apiPost("/api/session/start", { intent });
   if (!response.ok) {
     statusText.textContent = "Error starting session";
@@ -234,6 +295,7 @@ async function handleStartFresh() {
     paused: false,
     autoEndedSessionId: undefined,
     intent,
+    baseUrl,
   });
   render(await getState());
 }
@@ -300,3 +362,4 @@ continueLastBtn?.addEventListener("click", handleContinueLast);
 saveIntentBtn?.addEventListener("click", handleSaveIntent);
 
 getState().then(render);
+getBaseUrl().then(() => {});

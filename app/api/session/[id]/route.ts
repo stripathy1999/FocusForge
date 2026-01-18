@@ -11,14 +11,14 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const session = getSession(id);
+  const session = await getSession(id);
 
   if (!session) {
     return corsJson({ error: "Session not found." }, { status: 404 });
   }
 
-  const events = getEvents(id);
-  const analysis = getAnalysis(id);
+  const events = await getEvents(id);
+  const analysis = await getAnalysis(id);
   const computedSummary = computeSummary(session, events, analysis);
 
   return corsJson({ session, events, computedSummary });

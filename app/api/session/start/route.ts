@@ -13,6 +13,6 @@ export async function POST(request: Request) {
   } catch {
     intentRaw = undefined;
   }
-  const session = createSession(intentRaw);
+  const session = await createSession(intentRaw);
   return corsJson({ sessionId: session.id });
 }

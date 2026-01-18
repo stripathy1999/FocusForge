@@ -2,7 +2,7 @@ import { computeSummary } from "@/lib/grouping";
 import { getEvents, getSession, setAnalysis } from "@/lib/store";
 import { AnalysisResult } from "@/lib/types";
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3-flash";
 
 export async function runGeminiAnalysis(
   sessionId: string,
@@ -13,11 +13,11 @@ export async function runGeminiAnalysis(
     return null;
   }
 
-  const session = getSession(sessionId);
+  const session = await getSession(sessionId);
   if (!session) {
     return null;
   }
-  const events = getEvents(sessionId);
+  const events = await getEvents(sessionId);
   const summary = computeSummary(session, events);
   console.info("[Gemini] Starting analysis", {
     sessionId,
@@ -74,7 +74,7 @@ export async function runGeminiAnalysis(
     sessionId,
     hasResume: Boolean(analysis.resumeSummary),
   });
-  setAnalysis(sessionId, analysis);
+  await setAnalysis(sessionId, analysis);
   return analysis;
 }
 

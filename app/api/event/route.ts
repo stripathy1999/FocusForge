@@ -27,8 +27,8 @@ export async function POST(request: Request) {
     title: body.title ?? "",
   };
 
-  const session = getSession(body.sessionId);
-  const events = getEvents(body.sessionId);
+  const session = await getSession(body.sessionId);
+  const events = await getEvents(body.sessionId);
   const lastEvent = events.length > 0 ? events[events.length - 1] : undefined;
   const lastRealEvent =
     lastEvent?.type === "BREAK" && events.length > 1
@@ -37,8 +37,8 @@ export async function POST(request: Request) {
   if (lastRealEvent) {
     const gapMs = event.ts - lastRealEvent.ts;
     if (gapMs > HARD_BREAK_THRESHOLD_MS && session?.status === "running") {
-      updateSessionStatus(body.sessionId, "auto_ended", lastRealEvent.ts);
-      addEvent({
+      await updateSessionStatus(body.sessionId, "auto_ended", lastRealEvent.ts);
+      await addEvent({
         sessionId: body.sessionId,
         ts: lastRealEvent.ts,
         type: "STOP",
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       );
     }
     if (gapMs > IDLE_THRESHOLD_MS) {
-      addEvent({
+      await addEvent({
         sessionId: body.sessionId,
         ts: lastRealEvent.ts,
         type: "BREAK",
@@ -61,6 +61,6 @@ export async function POST(request: Request) {
     }
   }
 
-  addEvent(event);
+  await addEvent(event);
   return corsJson({ ok: true });
 }

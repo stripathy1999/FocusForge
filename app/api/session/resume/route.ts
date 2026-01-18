@@ -16,12 +16,12 @@ export async function POST(request: Request) {
     return corsJson({ error: "sessionId is required." }, { status: 400 });
   }
 
-  const session = updateSessionStatus(body.sessionId, "running");
+  const session = await updateSessionStatus(body.sessionId, "running");
   if (!session) {
     return corsJson({ error: "Session not found." }, { status: 404 });
   }
 
-  addEvent({
+  await addEvent({
     sessionId: body.sessionId,
     ts: Date.now(),
     type: "RESUME",

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const session = updateSessionIntent(body.sessionId, intentRaw);
+  const session = await updateSessionIntent(body.sessionId, intentRaw);
   if (!session) {
     return corsJson({ error: "Session not found." }, { status: 404 });
   }

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   ts BIGINT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'TAB_ACTIVE',
   url TEXT NOT NULL,
   title TEXT,
   duration_sec INTEGER,

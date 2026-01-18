@@ -16,29 +16,31 @@ type SessionListItem = {
 };
 
 export async function GET() {
-  const sessions = listSessions().slice(0, 10);
-  const payload: SessionListItem[] = sessions.map((session) => {
-    const events = getEvents(session.id);
-    const summary = computeSummary(session, events);
-    const durationSec = summary.timeline.reduce((total, event) => {
-      if (event.type !== "TAB_ACTIVE") {
-        return total;
-      }
-      return total + (event.durationSec ?? 0);
-    }, 0);
-    const topWorkspaces = summary.domains
-      .slice(0, 2)
-      .map((domain) => domain.label);
+  const sessions = (await listSessions()).slice(0, 10);
+  const payload: SessionListItem[] = await Promise.all(
+    sessions.map(async (session) => {
+      const events = await getEvents(session.id);
+      const summary = computeSummary(session, events);
+      const durationSec = summary.timeline.reduce((total, event) => {
+        if (event.type !== "TAB_ACTIVE") {
+          return total;
+        }
+        return total + (event.durationSec ?? 0);
+      }, 0);
+      const topWorkspaces = summary.domains
+        .slice(0, 2)
+        .map((domain) => domain.label);
 
-    return {
-      id: session.id,
-      status: session.status,
-      started_at: session.started_at,
-      ended_at: session.ended_at,
-      durationSec,
-      topWorkspaces,
-    };
-  });
+      return {
+        id: session.id,
+        status: session.status,
+        started_at: session.started_at,
+        ended_at: session.ended_at,
+        durationSec,
+        topWorkspaces,
+      };
+    }),
+  );
 
   return corsJson({ sessions: payload });
 }
