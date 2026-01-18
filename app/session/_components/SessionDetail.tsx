@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { classifyWorkspace } from "@/lib/classify";
+import { alignmentForDomain, getDomainCategory } from "@/lib/grouping";
 import { ComputedSummary, Session } from "@/lib/types";
 
 type SessionDetailProps = {
@@ -243,6 +245,7 @@ function TimeBreakdownPie({
 }
 
 export function SessionDetail({ session, computedSummary }: SessionDetailProps) {
+  const router = useRouter();
   const timeline = computedSummary.timeline.filter(
     (event) => event.type !== "STOP",
   );
@@ -281,16 +284,59 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
     computedSummary.intent_tags?.length > 0
       ? computedSummary.intent_tags.join(", ")
       : computedSummary.intent_raw || "your intent";
-  const unknownLarge =
-    computedSummary.focus.unknownTimeSec >= 30 &&
-    computedSummary.focus.unknownTimeSec >=
-      computedSummary.focus.offIntentTimeSec;
+  const intentTags = computedSummary.intent_tags ?? [];
+  const totalActiveSec = computedSummary.focus.totalTimeSec || 0;
+  const topWorkspaceAlignment = topWorkspace
+    ? alignmentForDomain(intentTags, topWorkspace)
+    : null;
+  const dominantCategory = topWorkspace
+    ? getDomainCategory(topWorkspace.domain, topWorkspace)
+    : null;
+  const intentCategoryLabels: Record<string, string> = {
+    coding: "Coding",
+    interview_prep: "Interview prep",
+    job_search: "Job search",
+    learning: "Learning",
+    creativity: "Creativity",
+    content_creation: "Content creation",
+    entertainment: "Entertainment",
+    docs_writing: "Docs/Writing",
+    video_editing: "Video editing",
+    mock_test: "Mock interviews",
+    dev_tools: "Dev tools",
+    comms: "Comms",
+  };
+  const intentCategoryTags: Record<string, string> = {
+    coding: "coding",
+    interview_prep: "interview prep",
+    job_search: "job search",
+    learning: "learning",
+    creativity: "creativity",
+    content_creation: "content creation",
+    entertainment: "entertainment",
+    docs_writing: "docs/writing",
+    video_editing: "video editing",
+    mock_test: "mock interview",
+    dev_tools: "dev tools",
+    comms: "comms",
+  };
+  const suggestedIntent =
+    dominantCategory && intentCategoryLabels[dominantCategory];
+  const suggestedIntentTag =
+    dominantCategory && intentCategoryTags[dominantCategory];
+  const topWorkspaceDominates =
+    topWorkspace && totalActiveSec > 0
+      ? topWorkspace.timeSec / totalActiveSec >= 0.4
+      : false;
   const showMismatchPrompt =
-    !computedSummary.focus.intentMissing &&
-    computedSummary.focus.alignedTimeSec === 0 &&
-    computedSummary.focus.offIntentTimeSec > 0 &&
-    unknownLarge &&
+    intentTags.length > 0 &&
     Boolean(topWorkspace) &&
+    Boolean(suggestedIntent) &&
+    dominantCategory !== "dev_tools" &&
+    dominantCategory !== "comms" &&
+    topWorkspaceAlignment === "off-intent" &&
+    topWorkspaceDominates &&
+    totalActiveSec >= 180 &&
     !dismissedMismatch;
 
   const handleIntentUpdate = async (nextIntent: string) => {
@@ -311,6 +357,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
       }
       setIntentUpdateMessage(`Intent updated to: ${nextIntent}`);
       setDismissedMismatch(true);
+      router.refresh();
     } catch (error: any) {
       setIntentUpdateMessage(error?.message || "Failed to update intent");
     } finally {
@@ -553,18 +600,21 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                   ) : (
                     <p className="mt-2 text-base text-zinc-600 text-center">No intent set.</p>
                   )}
-                  {showMismatchPrompt && topWorkspace && (
+                  {showMismatchPrompt &&
+                    topWorkspace &&
+                    suggestedIntent &&
+                    suggestedIntentTag && (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                       <p>
-                        Your intent was {intentLabel}, but your activity looks
-                        like {topWorkspace.label}. Update intent?
+                        Your intent was {intentLabel}, but you spent most time on{" "}
+                        {topWorkspace.label}. Update intent to {suggestedIntent}?
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
                           type="button"
                           className="rounded-full bg-amber-200 px-3 py-1 text-[11px] font-semibold text-amber-900 disabled:opacity-60"
                           disabled={intentUpdating}
-                          onClick={() => handleIntentUpdate(topWorkspace.label)}
+                          onClick={() => handleIntentUpdate(suggestedIntentTag)}
                         >
                           Update intent for this session
                         </button>
@@ -1319,6 +1369,69 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
 
                 {activeTab === "tasks" && (
                   <div className="flex flex-col gap-4">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-4">
+                      <div className="flex flex-col gap-1">
+                        <p
+                          className="text-xs font-semibold uppercase tracking-wide text-zinc-500"
+                          style={{ fontFamily: "var(--font-jura), sans-serif" }}
+                        >
+                          Suggested Focus
+                        </p>
+                        <div className="text-sm text-zinc-700">
+                          {computedSummary.intent_tags?.length ? (
+                            <>
+                              Intent:{" "}
+                              <span className="font-semibold text-zinc-900">
+                                {computedSummary.intent_tags.join(", ")}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="font-semibold text-zinc-900">
+                              No intent set
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          {computedSummary.focus.totalTimeSec > 0 ? (
+                            <>
+                              Aligned{" "}
+                              {Math.round(
+                                (computedSummary.focus.alignedTimeSec /
+                                  computedSummary.focus.totalTimeSec) *
+                                  100,
+                              )}
+                              % · Off‑intent{" "}
+                              {Math.round(
+                                (computedSummary.focus.offIntentTimeSec /
+                                  computedSummary.focus.totalTimeSec) *
+                                  100,
+                              )}
+                              % · Unknown{" "}
+                              {Math.round(
+                                (computedSummary.focus.unknownTimeSec /
+                                  computedSummary.focus.totalTimeSec) *
+                                  100,
+                              )}
+                              %
+                            </>
+                          ) : (
+                            "Not enough activity to compute alignment yet."
+                          )}
+                        </div>
+                        <p className="mt-2 text-sm text-zinc-600">
+                          {computedSummary.intent_tags?.length === 0
+                            ? "Set an intent to get accurate alignment and better task suggestions."
+                            : computedSummary.focus.offIntentTimeSec >
+                              computedSummary.focus.alignedTimeSec
+                            ? `Off‑intent time exceeded aligned time. Refocus on ${
+                                computedSummary.domains[0]?.label || "your top workspace"
+                              }.`
+                            : `Keep momentum in ${
+                                computedSummary.domains[0]?.label || "your top workspace"
+                              }.`}
+                        </p>
+                      </div>
+                    </div>
                     {loadingTasks ? (
                       <p className="text-sm text-zinc-500">Loading tasks...</p>
                     ) : tasks.length === 0 ? (
@@ -1330,7 +1443,7 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                         {tasks.map((task: any, index: number) => (
                           <div
                             key={task.id || index}
-                            className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 transition-all duration-200 hover:border-[#32578E] hover:bg-white hover:shadow-lg"
+                            className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-200 hover:border-[#32578E] hover:shadow-md"
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
@@ -1368,6 +1481,18 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                             </div>
                           </div>
                         ))}
+                        {taskSuggestions.length > 0 && (
+                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                              Suggested next moves
+                            </p>
+                            <ul className="mt-2 space-y-1 text-sm text-zinc-600">
+                              {taskSuggestions.map((suggestion, index) => (
+                                <li key={`${suggestion}-${index}`}>• {suggestion}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

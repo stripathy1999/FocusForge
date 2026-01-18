@@ -27,12 +27,14 @@ export async function GET(
     // Convert to planning agent format
     const analysisSummary = {
       goalInferred: '',
+      intentTags: session.intent_tags ?? [],
       workspaces: meaningfulWorkspaces.map(d => ({
         label: d.label,
         timeSec: d.timeSec,
         topUrls: d.topUrls,
         topTitles: d.topTitles
       })),
+      focus: computedSummary.focus,
       resumeSummary: computedSummary.resumeSummary || '',
       lastStop: computedSummary.lastStop ? {
         label: computedSummary.lastStop.label || computedSummary.lastStop.title || '',
@@ -121,39 +123,90 @@ function generateTaskDescription(title: string): string {
 function createBasicTaskPlan(analysis: any): any {
   const nextActions = analysis.nextActions || []
   const pendingDecisions = analysis.pendingDecisions || []
-
-  if (!nextActions.length && !pendingDecisions.length) {
-    return {
-      prioritizedTasks: [
-        {
-          id: "task_1",
-          title:
-            "Pick the correct session intent (your browsing didn’t match the intent).",
-          priority: "high",
-          urgency: "now",
-          estimatedTime: "1 minute",
-          dependencies: [],
-          reason: "Fixes alignment accuracy",
-          context: "",
-        },
-      ],
-      taskOrder: ["task_1"],
-      suggestions: [
-        "Update intent so FocusForge can judge focus correctly.",
-      ],
-      insights: [
-        "No reliable next actions detected (not enough time on specific workspaces).",
-      ],
-    }
-  }
+  const intentTags = analysis.intentTags || []
+  const workspaces = analysis.workspaces || []
+  const topWorkspace = workspaces[0]
+  const focus = analysis.focus || {}
+  const totalTimeSec =
+    focus.totalTimeSec ?? workspaces.reduce((sum: number, w: any) => sum + (w.timeSec || 0), 0)
+  const alignedSec = focus.alignedTimeSec ?? 0
+  const offIntentSec = focus.offIntentTimeSec ?? 0
+  const unknownSec = focus.unknownTimeSec ?? 0
 
   const tasks: any[] = []
   const taskIds: string[] = []
+  const suggestions: string[] = []
+  const insights: string[] = []
+
+  const pushTask = (task: any) => {
+    tasks.push(task)
+    taskIds.push(task.id)
+  }
+
+  if (!intentTags.length) {
+    pushTask({
+      id: "intent_1",
+      title: "Set the correct session intent to get accurate focus tracking.",
+      priority: "high",
+      urgency: "now",
+      estimatedTime: "1 minute",
+      dependencies: [],
+      reason: "FocusForge needs intent to judge alignment",
+      context: "",
+    })
+    suggestions.push("Add your intent so tasks match what you actually wanted to do.")
+  }
+
+  if (analysis.lastStop?.url) {
+    pushTask({
+      id: "resume_1",
+      title: `Resume last stop: ${analysis.lastStop.label || "last tab"}`,
+      priority: "high",
+      urgency: "now",
+      estimatedTime: "5 minutes",
+      dependencies: [],
+      description: generateTaskDescription("open last stop"),
+      reason: "Fastest way to regain context",
+      context: analysis.lastStop.url,
+    })
+  }
+
+  if (topWorkspace?.label) {
+    pushTask({
+      id: "focus_1",
+      title: `Continue in ${topWorkspace.label}`,
+      priority: "medium",
+      urgency: "soon",
+      estimatedTime: "25 minutes",
+      dependencies: [],
+      description: generateTaskDescription(`Continue in ${topWorkspace.label} workspace`),
+      reason: "Most active workspace in this session",
+      context: "",
+    })
+  }
+
+  if (totalTimeSec > 0 && offIntentSec > alignedSec) {
+    pushTask({
+      id: "refocus_1",
+      title: "Refocus on your intent and close off‑intent tabs.",
+      priority: "high",
+      urgency: "now",
+      estimatedTime: "5 minutes",
+      dependencies: [],
+      reason: "Off‑intent time exceeded aligned time",
+      context: "",
+    })
+    suggestions.push("Return to your intent by reopening your last focused tab.")
+  } else if (totalTimeSec > 0 && alignedSec > 0) {
+    suggestions.push("Keep momentum on your aligned work while it is fresh.")
+  } else if (unknownSec > 0) {
+    suggestions.push("Revisit recent tabs to clarify which ones match your intent.")
+  }
 
   // Convert nextActions to tasks
   nextActions.slice(0, 5).forEach((action: string, i: number) => {
     const taskId = `task_${i + 1}`
-    tasks.push({
+    pushTask({
       id: taskId,
       title: action,
       priority: 'medium',
@@ -164,14 +217,13 @@ function createBasicTaskPlan(analysis: any): any {
       reason: 'Suggested from session analysis',
       context: ''
     })
-    taskIds.push(taskId)
   })
 
   // Add pending decisions
   pendingDecisions.slice(0, 3).forEach((decision: string, i: number) => {
     const taskId = `decision_${i + 1}`
     const title = `Decide: ${decision}`
-    tasks.push({
+    pushTask({
       id: taskId,
       title: title,
       priority: 'high',
@@ -182,19 +234,33 @@ function createBasicTaskPlan(analysis: any): any {
       reason: 'Pending decision from session',
       context: ''
     })
-    taskIds.push(taskId)
   })
+
+  if (!tasks.length) {
+    pushTask({
+      id: "task_1",
+      title: "Review your recent tabs and pick a focus to continue.",
+      priority: "medium",
+      urgency: "soon",
+      estimatedTime: "10 minutes",
+      dependencies: [],
+      reason: "No reliable next actions detected",
+      context: "",
+    })
+    insights.push("Not enough signal to auto‑generate tasks yet.")
+  }
+
+  if (!suggestions.length) {
+    suggestions.push("Prioritize tasks based on deadlines and importance.")
+  }
+  if (!insights.length) {
+    insights.push("Tasks generated from session analysis.")
+  }
 
   return {
     prioritizedTasks: tasks,
     taskOrder: taskIds,
-    suggestions: [
-      'Review your session summary to understand what you accomplished',
-      'Prioritize tasks based on deadlines and importance'
-    ],
-    insights: [
-      'Tasks generated from session analysis',
-      'Consider using calendar to schedule time for these tasks'
-    ]
+    suggestions,
+    insights,
   }
 }

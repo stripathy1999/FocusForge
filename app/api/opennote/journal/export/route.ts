@@ -1,7 +1,44 @@
 import { corsHeaders, corsJson } from "@/app/api/cors";
 import { supabaseAdmin } from "@/lib/supabase";
 import { generateSessionMarkdown, importJournalToOpennote } from "@/lib/opennote";
-import { getSafeDefaultAnalysis } from "@/lib/utils";
+import { computeSummary } from "@/lib/grouping";
+import type { Session, SessionStatus } from "@/lib/types";
+
+function normalizeTimestamp(value: any): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = new Date(value).getTime();
+    return Number.isNaN(parsed) ? Date.now() : parsed;
+  }
+  return Date.now();
+}
+
+function parseIntentTags(rawIntent?: string | null): string[] {
+  if (!rawIntent) return [];
+  const trimmed = rawIntent.trim();
+  if (!trimmed) return [];
+  return trimmed
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+function mapStatusFromDb(status?: string): SessionStatus {
+  if (status === "running" || status === "active") {
+    return "running";
+  }
+  if (status === "paused") {
+    return "paused";
+  }
+  if (status === "auto_ended") {
+    return "auto_ended";
+  }
+  if (status === "analyzed") {
+    return "analyzed";
+  }
+  return "ended";
+}
 
 // App Router route that directly uses Supabase and Opennote API
 // This avoids the fetch proxy issue and uses the database directly
@@ -54,9 +91,9 @@ export async function POST(request: Request) {
       return corsJson({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Fetch events from Supabase
-    const { data: events, error: eventsError } = await supabaseAdmin
-      .from('events')
+    // Fetch events from Supabase (session_events is the source of truth)
+    const { data: eventRows, error: eventsError } = await supabaseAdmin
+      .from('session_events')
       .select('*')
       .eq('session_id', sessionId)
       .order('ts', { ascending: true });
@@ -66,6 +103,18 @@ export async function POST(request: Request) {
       return corsJson({ error: eventsError.message }, { status: 500 });
     }
 
+    const eventsRaw = (eventRows || []).map((row: any) => {
+      const tsMs = normalizeTimestamp(row.ts);
+      return {
+        sessionId: row.session_id,
+        tsMs,
+        tsIso: new Date(tsMs).toISOString(),
+        type: row.type ?? "TAB_ACTIVE",
+        url: row.url ?? "",
+        title: row.title ?? "",
+      };
+    });
+
     // Fetch analysis (optional - use heuristic fallback if missing)
     const { data: analysis } = await supabaseAdmin
       .from('analysis')
@@ -73,8 +122,77 @@ export async function POST(request: Request) {
       .eq('session_id', sessionId)
       .single();
 
-    // Use analysis if available, otherwise use safe defaults
-    const analysisData = analysis?.summary_json || getSafeDefaultAnalysis();
+    const intentRaw =
+      session.intent_text ??
+      session.goal ??
+      session.intent_raw ??
+      session.raw_context ??
+      "";
+    const intentTags = Array.isArray(session.intent_tags)
+      ? session.intent_tags
+      : parseIntentTags(intentRaw);
+    const sessionForSummary: Session = {
+      id: session.id,
+      started_at: normalizeTimestamp(session.started_at),
+      ended_at: session.ended_at ? normalizeTimestamp(session.ended_at) : undefined,
+      status: mapStatusFromDb(session.status),
+      intent_raw: intentRaw?.trim() || undefined,
+      intent_tags: intentTags,
+    };
+    const eventsForSummary = eventsRaw.map((event) => ({
+      sessionId: event.sessionId,
+      ts: event.tsMs,
+      type: event.type,
+      url: event.url,
+      title: event.title,
+    }));
+    const analysisSummary = analysis?.summary_json ?? undefined;
+    const computedSummary = computeSummary(
+      sessionForSummary,
+      eventsForSummary,
+      analysisSummary,
+    );
+    const alignment = {
+      alignedSec: computedSummary.focus.alignedTimeSec,
+      offIntentSec: computedSummary.focus.offIntentTimeSec,
+      neutralSec: computedSummary.focus.neutralTimeSec,
+      unknownSec: computedSummary.focus.unknownTimeSec,
+    };
+    const mostActiveWorkspace = computedSummary.domains[0]
+      ? {
+          label: computedSummary.domains[0].label,
+          timeSec: computedSummary.domains[0].timeSec,
+        }
+      : undefined;
+    const lastStopComputed = computedSummary.lastStop?.url
+      ? {
+          label:
+            computedSummary.lastStop.title ||
+            computedSummary.lastStop.label ||
+            computedSummary.lastStop.url,
+          url: computedSummary.lastStop.url,
+        }
+      : undefined;
+    const analysisData = {
+      ...(analysisSummary || {}),
+      resumeSummary: computedSummary.resumeSummary,
+      nextActions: computedSummary.nextActions,
+      pendingDecisions: computedSummary.pendingDecisions,
+      workspaces: computedSummary.domains.map((domain) => ({
+        label: domain.label,
+        timeSec: domain.timeSec,
+        topUrls: domain.topUrls,
+        topTitles: domain.topTitles,
+      })),
+      mostActiveWorkspace,
+      topPages: computedSummary.topPages.map((page) => ({
+        title: page.title,
+        url: page.url,
+        domain: page.domain,
+      })),
+      alignment,
+      lastStop: lastStopComputed,
+    };
 
     // Generate markdown
     const sessionData = {
@@ -82,9 +200,13 @@ export async function POST(request: Request) {
         id: session.id,
         started_at: session.started_at,
         ended_at: session.ended_at,
-        intent_text: session.intent_text
+        intent_text: session.intent_text ?? session.goal ?? null
       },
-      events: events || [],
+      events: eventsRaw.map((event) => ({
+        url: event.url,
+        title: event.title,
+        ts: event.tsIso,
+      })),
       analysis: analysisData
     };
 

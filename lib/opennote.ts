@@ -105,6 +105,28 @@ export function generateSessionMarkdown(data: SessionData): string {
   }
   md += `\n`
 
+  // Focus recap (descriptive)
+  if (analysis?.alignment || mostActive?.label || topWorkspace?.label) {
+    md += `## Focus Recap\n\n`
+    if (mostActive?.label || topWorkspace?.label) {
+      const label = mostActive?.label || topWorkspace?.label
+      const timeSec = mostActive?.timeSec ?? topWorkspace?.timeSec ?? 0
+      md += `You spent the most time in **${label}** (${formatTime(timeSec)}). `
+    }
+    if (analysis?.alignment) {
+      const a = analysis.alignment
+      const total =
+        (a.alignedSec || 0) +
+        (a.offIntentSec || 0) +
+        (a.neutralSec || 0) +
+        (a.unknownSec || 0)
+      const alignedPct = total > 0 ? Math.round((a.alignedSec / total) * 100) : 0
+      const offPct = total > 0 ? Math.round((a.offIntentSec / total) * 100) : 0
+      md += `Intent alignment was **${alignedPct}% aligned** and **${offPct}% off‑intent**.`
+    }
+    md += `\n\n`
+  }
+
   // Time breakdown (clean)
   if (workspaces.length) {
     md += `## Time Breakdown\n\n`
@@ -117,7 +139,7 @@ export function generateSessionMarkdown(data: SessionData): string {
   // Alignment (if available)
   if (analysis?.alignment) {
     const a = analysis.alignment
-    md += `## Intent Alignment\n\n`
+    md += `## Intent Alignment (heuristic)\n\n`
     md += `- Aligned: **${formatTime(a.alignedSec)}**\n`
     md += `- Off-intent: **${formatTime(a.offIntentSec)}**\n`
     md += `- Neutral: **${formatTime(a.neutralSec)}**\n`
