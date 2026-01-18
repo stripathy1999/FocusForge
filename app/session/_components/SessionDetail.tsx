@@ -786,9 +786,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       ))
                     )}
                   </div>
-                  <p className="mt-3 text-xs text-zinc-500">
-                    No guilt, this just helps you snap back faster.
-                  </p>
                 </div>
               </div>
               <div>
@@ -809,11 +806,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                 ) : (
                   <p className="mt-2 text-base text-zinc-500">No last stop recorded.</p>
                 )}
-              </div>
-              <div className="pt-4 text-sm text-zinc-500">
-                <Link href="/session/demo" className="underline" style={{ color: '#4777B9' }}>
-                  View demo session →
-                </Link>
               </div>
             </div>
           </aside>
