@@ -1,0 +1,5 @@
+# Requirements for standalone analyzer server
+flask>=2.3.0
+flask-cors>=4.0.0
+google-generativeai>=0.3.0
+pyparsing>=3.0.4,<4

@@ -1,0 +1,14 @@
+# FocusForge dependencies
+
+# For Gemini API (optional, for intelligent analysis)
+# Note: google.generativeai is deprecated but still works. Future versions should use google.genai
+google-generativeai>=0.3.0
+
+# Dependencies required by google-generativeai
+# httplib2 requires pyparsing>=3.0.4
+pyparsing>=3.0.4,<4
+
+# For tool use (calendar and email) - optional
+google-api-python-client>=2.0.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=0.5.0
