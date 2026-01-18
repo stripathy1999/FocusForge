@@ -642,45 +642,6 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                       )}
                     </ul>
                   </div>
-                  <div className="mt-3">
-                    <p className="text-sm font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-jura), sans-serif', color: '#4988C4' }}>
-                      Next actions:
-                    </p>
-                    <div className="text-sm text-zinc-600">
-                    <ul className="mt-2 list-disc pl-5">
-                      {heuristic.nextActions.map((item) => {
-                        const isReviewTabs = item === "Review your recent tabs";
-                        const isContinue = item === "Continue where you left off";
-                        return (
-                          <li 
-                            key={item}
-                            onClick={() => {
-                              if (isReviewTabs) {
-                                setActiveTab("timeline");
-                              } else if (isContinue && computedSummary.resumeUrls.length > 0) {
-                                handleReopen(computedSummary.resumeUrls);
-                              }
-                            }}
-                            className={isReviewTabs || isContinue ? "cursor-pointer" : ""}
-                          >
-                            {isReviewTabs ? (
-                              <>
-                                Review your{" "}
-                                <span style={{ color: '#4777B9', fontFamily: 'var(--font-jura), sans-serif' }}>recent tabs</span>
-                              </>
-                            ) : isContinue ? (
-                              <>
-                                <span style={{ color: '#4777B9', fontFamily: 'var(--font-jura), sans-serif' }}>Continue</span> where you left off
-                              </>
-                            ) : (
-                              item
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    </div>
-                  </div>
                 </div>
               )}
               <hr className="border-zinc-200 my-6" />
@@ -1230,8 +1191,10 @@ export function SessionDetail({ session, computedSummary }: SessionDetailProps) 
                                     Priority: {task.priority}
                                   </span>
                                 </div>
-                                {task.reason && (
-                                  <p className="text-sm text-zinc-600 mb-2">{task.reason}</p>
+                                {(task.description || task.reason) && (
+                                  <p className="text-sm text-zinc-600 mb-2">
+                                    {task.description || task.reason}
+                                  </p>
                                 )}
                                 {task.context && (
                                   <p className="text-xs text-zinc-500 italic">{task.context}</p>

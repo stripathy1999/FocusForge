@@ -67,6 +67,7 @@ Output format (JSON only, no backticks):
       "urgency": "urgent" | "soon" | "later",
       "estimatedTime": "30 minutes" | "1 hour" | etc,
       "dependencies": ["task_2"],  // IDs of tasks that must be done first
+      "description": "Clear, actionable description of what to do for this task",
       "reason": "Why this task is important",
       "context": "Additional context from calendar/email if available"
     }
@@ -305,6 +306,27 @@ def planTasks(
         return create_basic_task_plan(analysis_summary)
 
 
+def generate_task_description(title: str) -> str:
+    """Generate a description for a task based on its title."""
+    lower_title = title.lower()
+    
+    if "resume" in lower_title or "open last stop" in lower_title:
+        return "Press the \"Resume Session\" button to reopen the tab or workspace where you left off and continue your work seamlessly."
+    if "continue in" in lower_title or "workspace" in lower_title:
+        return "Press the \"Resume Session\" button or use \"Continue where you left off\" to return to the workspace you were actively using."
+    if "review" in lower_title and "pages" in lower_title:
+        return "Review the most visited pages from your session to identify key resources and information you were working with."
+    if "review" in lower_title and "tabs" in lower_title:
+        return "Go through your recent tabs to see what you were working on and identify any unfinished tasks."
+    if "decide:" in lower_title:
+        return "Make a decision on this item based on the context from your session and your current priorities."
+    if "complete" in lower_title or "finish" in lower_title:
+        return "Complete this task that was started during your session to maintain momentum and avoid losing context."
+    
+    # Default description
+    return "Work on this task based on your session activity and current priorities."
+
+
 def create_basic_task_plan(analysis_summary: Dict[str, Any]) -> Dict[str, Any]:
     """Create a basic task plan from analysis summary (fallback)."""
     next_actions = analysis_summary.get("nextActions", [])
@@ -323,6 +345,7 @@ def create_basic_task_plan(analysis_summary: Dict[str, Any]) -> Dict[str, Any]:
             "urgency": "soon",
             "estimatedTime": "30 minutes",
             "dependencies": [],
+            "description": generate_task_description(action),
             "reason": "Suggested from session analysis",
             "context": ""
         })
@@ -331,13 +354,15 @@ def create_basic_task_plan(analysis_summary: Dict[str, Any]) -> Dict[str, Any]:
     # Add pending decisions as tasks
     for i, decision in enumerate(pending_decisions[:3]):
         task_id = f"decision_{i+1}"
+        title = f"Decide: {decision}"
         tasks.append({
             "id": task_id,
-            "title": f"Decide: {decision}",
+            "title": title,
             "priority": "high",
             "urgency": "soon",
             "estimatedTime": "15 minutes",
             "dependencies": [],
+            "description": generate_task_description(title),
             "reason": "Pending decision from session",
             "context": ""
         })
